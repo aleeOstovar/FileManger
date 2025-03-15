@@ -16,12 +16,14 @@ const swaggerUi = require('swagger-ui-express');
 const logger = require('./utils/logger');
 const errorHandler = require('./middlewares/errorHandler');
 const { notFound } = require('./middlewares/notFound');
+const { protect } = require('./middlewares/auth');
 
 // Import routes
 const fileRoutes = require('./routes/fileRoutes');
 const imageRoutes = require('./routes/imageRoutes');
 const documentRoutes = require('./routes/documentRoutes');
 const videoRoutes = require('./routes/videoRoutes');
+const apiKeyRoutes = require('./routes/apiKeyRoutes');
 
 // Create Express app
 const app = express();
@@ -44,7 +46,7 @@ app.use(cors({
     ? process.env.ALLOWED_ORIGINS?.split(',') || '*' 
     : '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key']
 }));
 
 // Rate limiting
@@ -96,18 +98,18 @@ const swaggerOptions = {
     ],
     components: {
       securitySchemes: {
-        bearerAuth: {
-          type: 'http',
-          scheme: 'bearer',
-          bearerFormat: 'JWT'
+        apiKeyAuth: {
+          type: 'apiKey',
+          in: 'header',
+          name: 'x-api-key'
         }
       }
     },
     security: [{
-      bearerAuth: []
+      apiKeyAuth: []
     }]
   },
-  apis: ['./src/routes/*.js', './src/models/*.js']
+  apis: ['./src/routes/*.js', './src/models/*.js', './src/controllers/*.js']
 };
 
 const swaggerDocs = swaggerJsDoc(swaggerOptions);
@@ -116,13 +118,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 // Serve static files from the uploads directory
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
-// Routes
-app.use('/api/v1/files', fileRoutes);
-app.use('/api/v1/images', imageRoutes);
-app.use('/api/v1/documents', documentRoutes);
-app.use('/api/v1/videos', videoRoutes);
-
-// API health check route
+// API health check route (public)
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     status: 'success',
@@ -130,6 +126,15 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+
+// Protected API routes
+app.use('/api/v1/api-keys', apiKeyRoutes);
+
+// All file management routes require authentication
+app.use('/api/v1/files', protect, fileRoutes);
+app.use('/api/v1/images', protect, imageRoutes);
+app.use('/api/v1/documents', protect, documentRoutes);
+app.use('/api/v1/videos', protect, videoRoutes);
 
 // 404 handler
 app.use(notFound);

@@ -12,11 +12,20 @@ const connectDB = async () => {
     
     // If username and password are provided, use them
     if (process.env.MONGO_USERNAME && process.env.MONGO_PASSWORD) {
-      // Parse the connection string to insert credentials
-      const url = new URL(mongoURI);
-      url.username = encodeURIComponent(process.env.MONGO_USERNAME);
-      url.password = encodeURIComponent(process.env.MONGO_PASSWORD);
-      mongoURI = url.toString();
+      // Handle connection string with credentials in a Windows-compatible way
+      if (mongoURI.includes('mongodb://')) {
+        // Replace mongodb:// with mongodb://username:password@
+        mongoURI = mongoURI.replace(
+          'mongodb://',
+          `mongodb://${encodeURIComponent(process.env.MONGO_USERNAME)}:${encodeURIComponent(process.env.MONGO_PASSWORD)}@`
+        );
+      } else if (mongoURI.includes('mongodb+srv://')) {
+        // Replace mongodb+srv:// with mongodb+srv://username:password@
+        mongoURI = mongoURI.replace(
+          'mongodb+srv://',
+          `mongodb+srv://${encodeURIComponent(process.env.MONGO_USERNAME)}:${encodeURIComponent(process.env.MONGO_PASSWORD)}@`
+        );
+      }
     }
     
     // Connect to MongoDB
