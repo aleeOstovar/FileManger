@@ -1,0 +1,158 @@
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">Create API Key</h1>
+  <div class="btn-toolbar mb-2 mb-md-0">
+    <a href="/dashboard/api-keys" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-left"></i> Back to API Keys
+    </a>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-body">
+        <form action="/dashboard/api-keys/create" method="POST">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          
+          <div class="mb-3">
+            <label for="name" class="form-label">API Key Name <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="name" name="name" required>
+            <div class="form-text">Give this API key a descriptive name (e.g., "Production App", "Testing Environment")</div>
+          </div>
+          
+          <div class="mb-3">
+            <label for="expiresIn" class="form-label">Expiration</label>
+            <select class="form-select" id="expiresIn" name="expiresIn">
+              <option value="">Never expires</option>
+              <option value="30">30 days</option>
+              <option value="60">60 days</option>
+              <option value="90">90 days</option>
+              <option value="180">180 days</option>
+              <option value="365">1 year</option>
+            </select>
+            <div class="form-text">For better security, consider setting an expiration date</div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Permissions</label>
+            <div class="form-text mb-2">Select the permissions for this API key</div>
+            
+            <div class="card">
+              <div class="card-header">File Operations</div>
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-md-3">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="perm_upload" name="permissions" value="upload">
+                      <label class="form-check-label" for="perm_upload">Upload</label>
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="perm_download" name="permissions" value="download">
+                      <label class="form-check-label" for="perm_download">Download</label>
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="perm_delete" name="permissions" value="delete">
+                      <label class="form-check-label" for="perm_delete">Delete</label>
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="perm_update" name="permissions" value="update">
+                      <label class="form-check-label" for="perm_update">Update</label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="card mt-3">
+              <div class="card-header">Media Operations</div>
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-md-3">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="perm_image_process" name="permissions" value="image:process">
+                      <label class="form-check-label" for="perm_image_process">Image Processing</label>
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="perm_video_process" name="permissions" value="video:process">
+                      <label class="form-check-label" for="perm_video_process">Video Processing</label>
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="perm_document_process" name="permissions" value="document:process">
+                      <label class="form-check-label" for="perm_document_process">Document Processing</label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mt-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="select_all_permissions">
+                <label class="form-check-label" for="select_all_permissions">
+                  <strong>Select All Permissions</strong>
+                </label>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mt-4">
+            <button type="submit" class="btn btn-primary">Create API Key</button>
+            <a href="/dashboard/api-keys" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title mb-0">About API Keys</h5>
+      </div>
+      <div class="card-body">
+        <p>API keys are used to authenticate requests to the File Manager API.</p>
+        <p>Each key can have specific permissions that control what actions it can perform.</p>
+        <p class="mb-0"><strong>Important:</strong></p>
+        <ul>
+          <li>The full API key will only be shown once when created</li>
+          <li>Store the key securely; it cannot be retrieved later</li>
+          <li>If a key is lost or compromised, revoke it and create a new one</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const selectAllCheckbox = document.getElementById('select_all_permissions');
+    const permissionCheckboxes = document.querySelectorAll('input[name="permissions"]');
+    
+    selectAllCheckbox.addEventListener('change', function() {
+      permissionCheckboxes.forEach(checkbox => {
+        checkbox.checked = selectAllCheckbox.checked;
+      });
+    });
+    
+    // Update "select all" checkbox state based on individual checkboxes
+    function updateSelectAllCheckbox() {
+      const checkedCount = document.querySelectorAll('input[name="permissions"]:checked').length;
+      selectAllCheckbox.checked = checkedCount === permissionCheckboxes.length;
+      selectAllCheckbox.indeterminate = checkedCount > 0 && checkedCount < permissionCheckboxes.length;
+    }
+    
+    permissionCheckboxes.forEach(checkbox => {
+      checkbox.addEventListener('change', updateSelectAllCheckbox);
+    });
+  });
+</script> 

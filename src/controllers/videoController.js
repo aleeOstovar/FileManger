@@ -2,6 +2,7 @@ const File = require('../models/File');
 const AppError = require('../utils/AppError');
 const catchAsync = require('../utils/catchAsync');
 const logger = require('../utils/logger');
+const { addFullUrl, addFullUrlToMany } = require('../utils/fileUtils');
 
 /**
  * @swagger
@@ -60,9 +61,15 @@ const uploadVideo = catchAsync(async (req, res, next) => {
     metadata: {}
   });
 
+  // Generate the full URL
+  const protocol = req.secure ? 'https' : 'http';
+  const host = req.get('host');
+  const fullUrl = `${protocol}://${host}${file.url}`;
+
+  // Return only the URL in the response
   res.status(201).json({
     status: 'success',
-    data: file
+    url: fullUrl
   });
 });
 
@@ -149,11 +156,14 @@ const getAllVideos = catchAsync(async (req, res, next) => {
   // Execute query
   const videos = await query;
 
+  // Add full URLs to all videos
+  const videosWithUrls = addFullUrlToMany(videos, req);
+
   // Send response
   res.status(200).json({
     status: 'success',
     results: videos.length,
-    data: videos
+    data: videosWithUrls
   });
 });
 

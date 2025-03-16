@@ -1,0 +1,36 @@
+<div class="text-center mb-4">
+  <h1 class="h3 mb-3 fw-normal">File Manager</h1>
+  <p class="lead">Create a New Account</p>
+</div>
+
+<form action="/dashboard/register" method="POST">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  
+  <div class="form-floating mb-3">
+    <input type="text" class="form-control" id="name" name="name" placeholder="Your Name" required>
+    <label for="name">Full Name</label>
+  </div>
+  
+  <div class="form-floating mb-3">
+    <input type="email" class="form-control" id="email" name="email" placeholder="name@example.com" required>
+    <label for="email">Email address</label>
+  </div>
+  
+  <div class="form-floating mb-3">
+    <input type="password" class="form-control" id="password" name="password" placeholder="Password" minlength="8" required>
+    <label for="password">Password (min 8 characters)</label>
+  </div>
+
+  <div class="form-floating mb-3">
+    <input type="password" class="form-control" id="passwordConfirm" name="passwordConfirm" placeholder="Confirm Password" minlength="8" required>
+    <label for="passwordConfirm">Confirm Password</label>
+  </div>
+
+  <button class="w-100 btn btn-lg btn-primary" type="submit">Register</button>
+  
+  <div class="mt-3">
+    <p>Already have an account? <a href="/dashboard/login">Sign in</a></p>
+  </div>
+  
+  <p class="mt-5 mb-3 text-muted">&copy; 2023 File Manager</p>
+</form> 

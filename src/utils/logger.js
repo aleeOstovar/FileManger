@@ -22,76 +22,103 @@ const levels = {
   trace: 10,
 };
 
-// Configure pino logger
-const logger = pino({
-  level: process.env.LOG_LEVEL || 'info',
-  transport: {
-    targets: [
-      // Console logging in development
-      {
-        target: 'pino-pretty',
-        level: process.env.LOG_LEVEL || 'info',
-        options: {
-          colorize: true,
-          translateTime: 'SYS:standard',
-          ignore: 'pid,hostname',
-        },
-      },
-      // File logging for all environments
-      {
-        target: 'pino/file',
-        options: { destination: logFilePath },
-        level: 'trace', // Log everything to file
-      },
-    ],
-  },
-  // Include timestamp, file, and line number in logs
-  base: {
-    pid: process.pid,
-    hostname: require('os').hostname(),
-  },
-  timestamp: pino.stdTimeFunctions.isoTime,
-  formatters: {
-    level: (label) => {
-      return { level: label };
+// Configure logger based on environment
+let loggerConfig;
+
+if (process.env.NODE_ENV === 'production') {
+  // For production, use a simpler configuration
+  loggerConfig = {
+    level: process.env.LOG_LEVEL || 'info',
+    timestamp: pino.stdTimeFunctions.isoTime,
+    serializers: {
+      err: pino.stdSerializers.err,
+      error: pino.stdSerializers.err,
+      req: pino.stdSerializers.req,
+      res: pino.stdSerializers.res,
+    }
+  };
+} else {
+  // For development, use pretty printing to console
+  loggerConfig = {
+    level: process.env.LOG_LEVEL || 'info',
+    transport: {
+      target: 'pino-pretty',
+      options: {
+        colorize: true,
+        translateTime: 'SYS:standard',
+        ignore: 'pid,hostname',
+      }
     },
-  },
-  // Customize the serialization of errors
-  serializers: {
-    err: pino.stdSerializers.err,
-    error: pino.stdSerializers.err,
-    req: pino.stdSerializers.req,
-    res: pino.stdSerializers.res,
-  },
+    timestamp: pino.stdTimeFunctions.isoTime,
+    serializers: {
+      err: pino.stdSerializers.err,
+      error: pino.stdSerializers.err,
+      req: pino.stdSerializers.req,
+      res: pino.stdSerializers.res,
+    }
+  };
+}
+
+// Create the logger instance
+const logger = pino(loggerConfig);
+
+// Add file logging through separate stream
+const fileStream = fs.createWriteStream(logFilePath, { flags: 'a' });
+const fileLogger = pino(
+  {
+    level: 'trace', // Log everything to file
+    timestamp: pino.stdTimeFunctions.isoTime,
+  }, 
+  fileStream
+);
+
+// Wrap the logger methods to also write to file
+const originalMethods = {
+  trace: logger.trace.bind(logger),
+  debug: logger.debug.bind(logger),
+  info: logger.info.bind(logger),
+  warn: logger.warn.bind(logger),
+  error: logger.error.bind(logger),
+  fatal: logger.fatal.bind(logger),
+};
+
+// Override each method to also log to file
+Object.keys(originalMethods).forEach(level => {
+  logger[level] = function() {
+    // Call original method with the console logger
+    originalMethods[level].apply(this, arguments);
+    
+    // Also log to file
+    fileLogger[level].apply(fileLogger, arguments);
+  };
 });
 
-// Add request tracing
-logger.trace = (obj, msg, ...args) => {
-  // Extract stack trace information
+// Add request tracing (simplified version)
+logger.trace = function(obj, msg, ...args) {
   const stackObj = {};
+  Error.captureStackTrace(stackObj, logger.trace);
+  const stack = stackObj.stack.split('\n')[2];
+  const match = stack.match(/\((.*):(\d+):(\d+)\)$/);
+  
   if (typeof obj === 'object') {
-    Error.captureStackTrace(stackObj, logger.trace);
-    const stack = stackObj.stack.split('\n')[2];
-    const match = stack.match(/\((.*):(\d+):(\d+)\)$/);
     if (match) {
       const [, file, line, column] = match;
       obj.file = file;
       obj.line = line;
-      obj.column = column;
     }
-    return logger.child(obj).trace(msg, ...args);
+    originalMethods.trace.call(this, obj, msg, ...args);
+    fileLogger.trace.call(fileLogger, obj, msg, ...args);
+    return;
   }
   
-  // Handle when first argument is a message
-  Error.captureStackTrace(stackObj, logger.trace);
-  const stack = stackObj.stack.split('\n')[2];
-  const match = stack.match(/\((.*):(\d+):(\d+)\)$/);
   let traceObj = {};
   if (match) {
-    const [, file, line, column] = match;
-    traceObj = { file, line, column };
+    const [, file, line] = match;
+    traceObj = { file, line };
   }
-  return logger.child(traceObj).trace(obj, msg, ...args);
+  
+  originalMethods.trace.call(this, traceObj, obj, msg, ...args);
+  fileLogger.trace.call(fileLogger, traceObj, obj, msg, ...args);
 };
 
 module.exports = logger; 

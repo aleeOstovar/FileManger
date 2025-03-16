@@ -1,0 +1,139 @@
+<div class="mb-4">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="/dashboard/news-posts">News Posts</a></li>
+      <li class="breadcrumb-item active" aria-current="page"><%= isEditing ? 'Edit' : 'Create' %> News Post</li>
+    </ol>
+  </nav>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h1 class="h3 mb-0"><%= isEditing ? 'Edit' : 'Create' %> News Post</h1>
+  </div>
+  <div class="card-body">
+    <form action="<%= formAction %>" method="POST" id="newsPostForm">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      
+      <div class="row mb-3">
+        <div class="col-md-8">
+          <div class="mb-3">
+            <label for="title" class="form-label required">Title</label>
+            <input type="text" class="form-control" id="title" name="title" value="<%= newsPost?.title || '' %>" required>
+          </div>
+          
+          <div class="mb-3">
+            <label for="content" class="form-label required">Content</label>
+            <textarea class="form-control rich-editor" id="content" name="content" rows="15" required><%= newsPost?.content || '' %></textarea>
+            <small class="text-muted">You can use HTML formatting in the content.</small>
+          </div>
+        </div>
+        
+        <div class="col-md-4">
+          <div class="mb-3">
+            <label for="status" class="form-label">Status</label>
+            <select class="form-select" id="status" name="status">
+              <option value="draft" <%= newsPost?.status === 'draft' ? 'selected' : '' %>>Draft</option>
+              <option value="published" <%= newsPost?.status === 'published' ? 'selected' : '' %>>Published</option>
+              <option value="archived" <%= newsPost?.status === 'archived' ? 'selected' : '' %>>Archived</option>
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <label for="creator" class="form-label">Creator</label>
+            <input type="text" class="form-control" id="creator" name="creator" value="<%= newsPost?.creator || '' %>">
+          </div>
+          
+          <div class="mb-3">
+            <label for="sourceUrl" class="form-label">Source URL</label>
+            <input type="url" class="form-control" id="sourceUrl" name="sourceUrl" value="<%= newsPost?.sourceUrl || '' %>">
+          </div>
+          
+          <div class="mb-3">
+            <label for="sourceDate" class="form-label">Source Date</label>
+            <input type="date" class="form-control" id="sourceDate" name="sourceDate" value="<%= newsPost?.sourceDate ? new Date(newsPost.sourceDate).toISOString().split('T')[0] : '' %>">
+          </div>
+          
+          <div class="mb-3">
+            <label for="tags" class="form-label">Tags</label>
+            <input type="text" class="form-control" id="tags" name="tags" value="<%= newsPost?.tags ? newsPost.tags.join(', ') : '' %>">
+            <small class="text-muted">Separate tags with commas</small>
+          </div>
+          
+          <div class="mb-3">
+            <label for="imageThumbnail" class="form-label">Thumbnail Image URL</label>
+            <input type="url" class="form-control" id="imageThumbnail" name="imageThumbnail" value="<%= newsPost?.imageThumbnail || '' %>">
+            <% if (newsPost?.imageThumbnail) { %>
+              <div class="mt-2">
+                <img src="<%= newsPost.imageThumbnail %>" alt="Thumbnail preview" class="img-fluid rounded" style="max-height: 150px;">
+              </div>
+            <% } %>
+          </div>
+          
+          <div class="mb-3">
+            <label for="imagesUrl" class="form-label">Additional Image URLs</label>
+            <textarea class="form-control" id="imagesUrl" name="imagesUrl" rows="3"><%= newsPost?.imagesUrl ? newsPost.imagesUrl.join('\n') : '' %></textarea>
+            <small class="text-muted">One URL per line</small>
+            
+            <% if (newsPost?.imagesUrl && newsPost.imagesUrl.length > 0) { %>
+              <div class="mt-2 row">
+                <% newsPost.imagesUrl.slice(0, 4).forEach(imageUrl => { %>
+                  <div class="col-6 mb-2">
+                    <img src="<%= imageUrl %>" alt="Image preview" class="img-fluid rounded" style="max-height: 100px;">
+                  </div>
+                <% }) %>
+                <% if (newsPost.imagesUrl.length > 4) { %>
+                  <div class="col-12">
+                    <small class="text-muted">And <%= newsPost.imagesUrl.length - 4 %> more images</small>
+                  </div>
+                <% } %>
+              </div>
+            <% } %>
+          </div>
+        </div>
+      </div>
+      
+      <div class="d-flex justify-content-between">
+        <a href="<%= isEditing ? `/dashboard/news-posts/${newsPost._id}` : '/dashboard/news-posts' %>" class="btn btn-secondary">
+          <i class="bi bi-arrow-left"></i> Cancel
+        </a>
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-save"></i> <%= isEditing ? 'Update' : 'Create' %> News Post
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Basic client-side validation
+    const form = document.getElementById('newsPostForm');
+    form.addEventListener('submit', function(event) {
+      const title = document.getElementById('title').value.trim();
+      const content = document.getElementById('content').value.trim();
+      
+      if (!title) {
+        event.preventDefault();
+        alert('Please enter a title for the news post.');
+        return;
+      }
+      
+      if (!content) {
+        event.preventDefault();
+        alert('Please enter content for the news post.');
+        return;
+      }
+    });
+    
+    // Optional: Initialize a rich text editor like TinyMCE here if available
+    // Example (requires TinyMCE to be included in your project):
+    // if (typeof tinymce !== 'undefined') {
+    //   tinymce.init({
+    //     selector: '.rich-editor',
+    //     plugins: 'link image lists table code',
+    //     toolbar: 'undo redo | formatselect | bold italic | alignleft aligncenter alignright | bullist numlist | link image | table | code'
+    //   });
+    // }
+  });
+</script> 

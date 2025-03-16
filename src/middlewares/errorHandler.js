@@ -128,31 +128,49 @@ const sendErrorProd = (err, res) => {
 };
 
 /**
- * Global error handler middleware
+ * Global error handler
  * @param {Error} err - The error object
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  * @param {Function} next - Express next function
  */
 const errorHandler = (err, req, res, next) => {
-  err.statusCode = err.statusCode || 500;
-  err.status = err.status || 'error';
-  
-  if (process.env.NODE_ENV === 'development') {
-    sendErrorDev(err, res);
-  } else if (process.env.NODE_ENV === 'production') {
-    let error = { ...err };
-    error.message = err.message;
-    error.stack = err.stack;
-    
-    if (error.name === 'CastError') error = handleCastErrorDB(error);
-    if (error.code === 11000) error = handleDuplicateFieldsDB(error);
-    if (error.name === 'ValidationError') error = handleValidationErrorDB(error);
-    if (error.name === 'JsonWebTokenError') error = handleJWTError();
-    if (error.name === 'TokenExpiredError') error = handleJWTExpiredError();
-    
-    sendErrorProd(error, res);
+  // Log the error
+  logger.error({
+    message: err.message,
+    stack: err.stack,
+    name: err.name,
+    code: err.code,
+    path: req.path,
+    method: req.method,
+    status: err.statusCode || 500
+  });
+
+  // Check if it's a MongoDB connection error
+  if (err.name === 'MongoNetworkError' || err.name === 'MongoServerSelectionError') {
+    return res.status(500).json({
+      status: 'error',
+      message: 'Database connection error. Please check your MongoDB connection settings.',
+      error: process.env.NODE_ENV === 'development' ? err.message : 'Database error'
+    });
   }
+
+  // MongoDB duplicate key error
+  if (err.code === 11000) {
+    return res.status(400).json({
+      status: 'error',
+      message: 'Duplicate value error. A record with this value already exists.',
+      error: process.env.NODE_ENV === 'development' ? err.message : 'Validation error'
+    });
+  }
+
+  // Default error response
+  const statusCode = err.statusCode || 500;
+  res.status(statusCode).json({
+    status: 'error',
+    message: err.message || 'Something went wrong',
+    error: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  });
 };
 
 module.exports = errorHandler; 

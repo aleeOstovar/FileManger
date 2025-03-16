@@ -5,6 +5,7 @@ const File = require('../models/File');
 const AppError = require('../utils/AppError');
 const catchAsync = require('../utils/catchAsync');
 const logger = require('../utils/logger');
+const { addFullUrl, addFullUrlToMany } = require('../utils/fileUtils');
 
 const unlinkAsync = promisify(fs.unlink);
 
@@ -96,11 +97,14 @@ const getAllFiles = catchAsync(async (req, res, next) => {
   // Execute query
   const files = await query;
 
+  // Add full URLs to all files
+  const filesWithUrls = addFullUrlToMany(files, req);
+
   // Send response
   res.status(200).json({
     status: 'success',
     results: files.length,
-    data: files
+    data: filesWithUrls
   });
 });
 
@@ -146,9 +150,12 @@ const getFile = catchAsync(async (req, res, next) => {
     return next(new AppError('No file found with that ID', 404));
   }
 
+  // Add full URL to the file
+  const fileWithUrl = addFullUrl(file, req);
+
   res.status(200).json({
     status: 'success',
-    data: file
+    data: fileWithUrl
   });
 });
 

@@ -7,31 +7,50 @@ const logger = require('../src/utils/logger');
  */
 const connectDB = async () => {
   try {
-    // Construct the MongoDB connection string with credentials if provided
-    let mongoURI = process.env.MONGO_URI;
+    // Try to use direct connection string first
+    let mongoURI;
     
-    // If username and password are provided, use them
-    if (process.env.MONGO_USERNAME && process.env.MONGO_PASSWORD) {
-      // Handle connection string with credentials in a Windows-compatible way
-      if (mongoURI.includes('mongodb://')) {
-        // Replace mongodb:// with mongodb://username:password@
-        mongoURI = mongoURI.replace(
-          'mongodb://',
-          `mongodb://${encodeURIComponent(process.env.MONGO_USERNAME)}:${encodeURIComponent(process.env.MONGO_PASSWORD)}@`
-        );
-      } else if (mongoURI.includes('mongodb+srv://')) {
-        // Replace mongodb+srv:// with mongodb+srv://username:password@
-        mongoURI = mongoURI.replace(
-          'mongodb+srv://',
-          `mongodb+srv://${encodeURIComponent(process.env.MONGO_USERNAME)}:${encodeURIComponent(process.env.MONGO_PASSWORD)}@`
-        );
+    if (process.env.MONGODB_DIRECT_URI) {
+      mongoURI = process.env.MONGODB_DIRECT_URI;
+      logger.info('Using direct MongoDB connection string');
+    } else {
+      // Fall back to constructing from parts
+      mongoURI = process.env.MONGO_URI;
+      const username = process.env.MONGO_USERNAME;
+      const password = process.env.MONGO_PASSWORD;
+      
+      // If username and password are provided, use them
+      if (username && password) {
+        // Handle connection string for MongoDB Atlas (cloud)
+        if (mongoURI.includes('mongodb+srv://')) {
+          // Make sure we don't have username/password already in the URI
+          if (!mongoURI.includes('@')) {
+            // URI format: mongodb+srv://host/
+            const [protocol, host] = mongoURI.split('//');
+            mongoURI = `${protocol}//${encodeURIComponent(username)}:${encodeURIComponent(password)}@${host}`;
+            logger.info('Constructed MongoDB connection string from parts');
+          }
+        } 
+        // Handle connection string for MongoDB local
+        else if (mongoURI.includes('mongodb://')) {
+          // Make sure we don't have username/password already in the URI
+          if (!mongoURI.includes('@')) {
+            // URI format: mongodb://host:port/
+            const [protocol, host] = mongoURI.split('//');
+            mongoURI = `${protocol}//${encodeURIComponent(username)}:${encodeURIComponent(password)}@${host}`;
+          }
+        }
       }
     }
     
-    // Connect to MongoDB
+    logger.info('Connecting to MongoDB...');
+    
+    // Connect to MongoDB with enhanced options for Windows
     const conn = await mongoose.connect(mongoURI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 10000, // 10 second timeout for Windows
+      socketTimeoutMS: 45000, // 45 second socket timeout
     });
     
     logger.info(`MongoDB Connected: ${conn.connection.host}`);

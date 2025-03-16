@@ -1,0 +1,166 @@
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">API Key Details</h1>
+  <div class="btn-toolbar mb-2 mb-md-0">
+    <a href="/dashboard/api-keys" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-left"></i> Back to API Keys
+    </a>
+    <% if (user.role === 'admin' && apiKey.active) { %>
+      <form action="/dashboard/api-keys/<%= apiKey._id %>/revoke" method="POST" class="ms-2">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to revoke this API key? This action cannot be undone.')">
+          <i class="bi bi-x-circle"></i> Revoke Key
+        </button>
+      </form>
+    <% } %>
+  </div>
+</div>
+
+<% if (newKey) { %>
+  <div class="alert alert-success alert-dismissible fade show" role="alert">
+    <h4 class="alert-heading">API Key Created Successfully!</h4>
+    <p>Your new API key has been created. Please copy the key now as it will not be shown again.</p>
+    <div class="input-group mb-3">
+      <input type="text" class="form-control" id="apiKeyValue" value="<%= newKey %>" readonly>
+      <button class="btn btn-outline-secondary" type="button" id="copyButton" onclick="copyApiKey()">
+        <i class="bi bi-clipboard"></i> Copy
+      </button>
+    </div>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+  
+  <script>
+    function copyApiKey() {
+      const apiKeyInput = document.getElementById('apiKeyValue');
+      apiKeyInput.select();
+      apiKeyInput.setSelectionRange(0, 99999);
+      navigator.clipboard.writeText(apiKeyInput.value);
+      
+      const copyButton = document.getElementById('copyButton');
+      copyButton.innerHTML = '<i class="bi bi-check"></i> Copied!';
+      setTimeout(() => {
+        copyButton.innerHTML = '<i class="bi bi-clipboard"></i> Copy';
+      }, 2000);
+    }
+  </script>
+<% } %>
+
+<div class="row">
+  <div class="col-md-8">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="mb-0">API Key Information</h5>
+      </div>
+      <div class="card-body">
+        <div class="row mb-3">
+          <div class="col-md-4 fw-bold">Name:</div>
+          <div class="col-md-8"><%= apiKey.name %></div>
+        </div>
+        <div class="row mb-3">
+          <div class="col-md-4 fw-bold">Key Prefix:</div>
+          <div class="col-md-8"><code><%= apiKey.key.substring(0, 10) %>...</code></div>
+        </div>
+        <div class="row mb-3">
+          <div class="col-md-4 fw-bold">Status:</div>
+          <div class="col-md-8">
+            <% if (apiKey.active) { %>
+              <span class="badge bg-success">Active</span>
+            <% } else { %>
+              <span class="badge bg-danger">Inactive</span>
+            <% } %>
+          </div>
+        </div>
+        <div class="row mb-3">
+          <div class="col-md-4 fw-bold">Created:</div>
+          <div class="col-md-8"><%= new Date(apiKey.createdAt).toLocaleString() %></div>
+        </div>
+        <div class="row mb-3">
+          <div class="col-md-4 fw-bold">Created By:</div>
+          <div class="col-md-8"><%= apiKey.createdBy ? apiKey.createdBy.name : 'System' %></div>
+        </div>
+        <div class="row mb-3">
+          <div class="col-md-4 fw-bold">Expires:</div>
+          <div class="col-md-8">
+            <% if (apiKey.expiresAt) { %>
+              <%= new Date(apiKey.expiresAt).toLocaleString() %>
+              <% 
+                const now = new Date();
+                const expiresAt = new Date(apiKey.expiresAt);
+                const daysRemaining = Math.ceil((expiresAt - now) / (1000 * 60 * 60 * 24));
+              %>
+              <% if (daysRemaining <= 7 && daysRemaining > 0) { %>
+                <span class="badge bg-warning text-dark">Expires in <%= daysRemaining %> days</span>
+              <% } else if (daysRemaining <= 0) { %>
+                <span class="badge bg-danger">Expired</span>
+              <% } %>
+            <% } else { %>
+              Never
+            <% } %>
+          </div>
+        </div>
+        <% if (!apiKey.active) { %>
+          <div class="row mb-3">
+            <div class="col-md-4 fw-bold">Revoked:</div>
+            <div class="col-md-8">
+              <%= apiKey.revokedAt ? new Date(apiKey.revokedAt).toLocaleString() : 'N/A' %>
+            </div>
+          </div>
+          <div class="row mb-3">
+            <div class="col-md-4 fw-bold">Revoked By:</div>
+            <div class="col-md-8">
+              <%= apiKey.revokedBy ? apiKey.revokedBy.name : 'N/A' %>
+            </div>
+          </div>
+        <% } %>
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">Usage Instructions</h5>
+      </div>
+      <div class="card-body">
+        <p>Include this API key in the <code>x-api-key</code> header of your requests:</p>
+        <pre><code>curl -X GET https://api.example.com/api/v1/files \
+  -H "x-api-key: <%= apiKey.key.substring(0, 10) %>..." \
+  -H "Content-Type: application/json"</code></pre>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-4">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="mb-0">Permissions</h5>
+      </div>
+      <div class="card-body">
+        <% if (apiKey.permissions && apiKey.permissions.length > 0) { %>
+          <ul class="list-group">
+            <% apiKey.permissions.forEach(permission => { %>
+              <li class="list-group-item">
+                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                <%= permission %>
+              </li>
+            <% }); %>
+          </ul>
+        <% } else { %>
+          <p class="text-muted">This API key has no permissions.</p>
+        <% } %>
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">Last Used</h5>
+      </div>
+      <div class="card-body">
+        <% if (apiKey.lastUsed) { %>
+          <p><strong>Date:</strong> <%= new Date(apiKey.lastUsed.timestamp).toLocaleString() %></p>
+          <p><strong>IP Address:</strong> <%= apiKey.lastUsed.ip || 'Unknown' %></p>
+          <p><strong>User Agent:</strong> <%= apiKey.lastUsed.userAgent || 'Unknown' %></p>
+        <% } else { %>
+          <p class="text-muted">This API key has never been used.</p>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</div> 

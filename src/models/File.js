@@ -120,6 +120,12 @@ fileSchema.virtual('url').get(function() {
   return `/uploads/${this.type}s/${this.filename}`;
 });
 
+// Virtual property for the full URL (including host)
+fileSchema.virtual('fullUrl').get(function() {
+  // This will be populated by the controller
+  return null;
+});
+
 // Static method to get file stats
 fileSchema.statics.getStats = async function() {
   return await this.aggregate([

@@ -1,0 +1,156 @@
+<h1 class="mb-4">Settings</h1>
+
+<div class="row">
+  <!-- General Settings -->
+  <div class="col-md-6 mb-4">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title mb-0">General Settings</h5>
+      </div>
+      <div class="card-body">
+        <form action="/dashboard/settings/general" method="POST">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          
+          <div class="mb-3">
+            <label for="appName" class="form-label">Application Name</label>
+            <input type="text" class="form-control" id="appName" name="appName" value="File Manager" disabled>
+            <div class="form-text text-muted">Application name as displayed in browser</div>
+          </div>
+          
+          <div class="mb-3">
+            <label for="contactEmail" class="form-label">Contact Email</label>
+            <input type="email" class="form-control" id="contactEmail" name="contactEmail" value="support@example.com" disabled>
+            <div class="form-text text-muted">Support email address</div>
+          </div>
+          
+          <div class="mb-3 form-check">
+            <input type="checkbox" class="form-check-input" id="maintenance" name="maintenance" disabled>
+            <label class="form-check-label" for="maintenance">Maintenance Mode</label>
+            <div class="form-text text-muted">When enabled, only administrators can access the application.</div>
+          </div>
+          
+          <button type="submit" class="btn btn-primary" disabled>
+            <i class="bi bi-save"></i> Save Changes
+          </button>
+          <div class="form-text text-muted mt-2">General settings are currently managed via environment variables.</div>
+        </form>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Security Settings -->
+  <div class="col-md-6 mb-4">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title mb-0">Security Settings</h5>
+      </div>
+      <div class="card-body">
+        <form action="/dashboard/settings/security" method="POST">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          
+          <div class="mb-3">
+            <label for="sessionTimeout" class="form-label">Session Timeout (minutes)</label>
+            <input type="number" class="form-control" id="sessionTimeout" name="sessionTimeout" value="1440" min="5" max="10080" disabled>
+            <div class="form-text text-muted">Time before user is automatically logged out</div>
+          </div>
+          
+          <div class="mb-3">
+            <label for="passwordPolicy" class="form-label">Password Policy</label>
+            <select class="form-select" id="passwordPolicy" name="passwordPolicy" disabled>
+              <option value="basic" selected>Basic (min 8 characters)</option>
+              <option value="medium">Medium (min 8 chars, require numbers)</option>
+              <option value="strong">Strong (min 10 chars, require numbers, symbols, uppercase)</option>
+            </select>
+            <div class="form-text text-muted">Password requirements for user accounts</div>
+          </div>
+          
+          <div class="mb-3 form-check">
+            <input type="checkbox" class="form-check-input" id="twoFactorAuth" name="twoFactorAuth" disabled>
+            <label class="form-check-label" for="twoFactorAuth">Require Two-Factor Authentication</label>
+            <div class="form-text text-muted">Require 2FA for all administrator accounts</div>
+          </div>
+          
+          <button type="submit" class="btn btn-primary" disabled>
+            <i class="bi bi-lock"></i> Save Security Settings
+          </button>
+          <div class="form-text text-muted mt-2">Security settings are currently managed via environment variables.</div>
+        </form>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Storage Settings -->
+  <div class="col-md-6 mb-4">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title mb-0">Storage Settings</h5>
+      </div>
+      <div class="card-body">
+        <form action="/dashboard/settings/storage" method="POST">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          
+          <div class="mb-3">
+            <label for="storageProvider" class="form-label">Storage Provider</label>
+            <select class="form-select" id="storageProvider" name="storageProvider" disabled>
+              <option value="local" selected>Local Storage</option>
+              <option value="s3">Amazon S3</option>
+              <option value="gcs">Google Cloud Storage</option>
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <label for="maxFileSize" class="form-label">Maximum File Size (MB)</label>
+            <input type="number" class="form-control" id="maxFileSize" name="maxFileSize" value="100" min="1" max="1000" disabled>
+          </div>
+          
+          <div class="mb-3">
+            <label for="allowedFileTypes" class="form-label">Allowed File Types</label>
+            <input type="text" class="form-control" id="allowedFileTypes" name="allowedFileTypes" value="image/*,application/pdf,text/*,video/*" disabled>
+            <div class="form-text text-muted">Comma-separated list of MIME types</div>
+          </div>
+          
+          <button type="submit" class="btn btn-primary" disabled>
+            <i class="bi bi-hdd"></i> Save Storage Settings
+          </button>
+          <div class="form-text text-muted mt-2">Storage settings are currently managed via environment variables.</div>
+        </form>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Application Info -->
+  <div class="col-md-6 mb-4">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title mb-0">Application Information</h5>
+      </div>
+      <div class="card-body">
+        <div class="mb-3">
+          <label class="form-label">Version</label>
+          <p class="form-control-plaintext">1.0.0</p>
+        </div>
+        
+        <div class="mb-3">
+          <label class="form-label">Node.js Version</label>
+          <p class="form-control-plaintext"><%= process.version %></p>
+        </div>
+        
+        <div class="mb-3">
+          <label class="form-label">Environment</label>
+          <p class="form-control-plaintext"><%= process.env.NODE_ENV || 'development' %></p>
+        </div>
+        
+        <div class="mb-3">
+          <label class="form-label">Database</label>
+          <p class="form-control-plaintext">
+            <%= process.env.USE_MEMORY_STORE === 'true' ? 'Memory Store (Development)' : 'MongoDB' %>
+          </p>
+        </div>
+        
+        <a href="/dashboard/metrics/system" class="btn btn-info">
+          <i class="bi bi-speedometer2"></i> View System Metrics
+        </a>
+      </div>
+    </div>
+  </div>
+</div> 

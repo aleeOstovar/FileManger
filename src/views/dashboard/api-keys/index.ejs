@@ -1,0 +1,77 @@
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">API Keys</h1>
+  <% if (user.role === 'admin' || user.role === 'manager') { %>
+    <div class="btn-toolbar mb-2 mb-md-0">
+      <a href="/dashboard/api-keys/create" class="btn btn-sm btn-primary">
+        <i class="bi bi-plus-lg"></i> Create API Key
+      </a>
+    </div>
+  <% } %>
+</div>
+
+<div class="table-responsive">
+  <table class="table table-striped table-hover">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Key Prefix</th>
+        <th>Created</th>
+        <th>Expires</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (apiKeys.length === 0) { %>
+        <tr>
+          <td colspan="6" class="text-center">No API keys found</td>
+        </tr>
+      <% } else { %>
+        <% apiKeys.forEach(key => { %>
+          <tr>
+            <td><%= key.name %></td>
+            <td><code><%= key.key.substring(0, 10) %>...</code></td>
+            <td><%= new Date(key.createdAt).toLocaleString() %></td>
+            <td>
+              <% if (key.expiresAt) { %>
+                <%= new Date(key.expiresAt).toLocaleString() %>
+                <% 
+                  const now = new Date();
+                  const expiresAt = new Date(key.expiresAt);
+                  const daysRemaining = Math.ceil((expiresAt - now) / (1000 * 60 * 60 * 24));
+                %>
+                <% if (daysRemaining <= 7 && daysRemaining > 0) { %>
+                  <span class="badge bg-warning text-dark">Expires in <%= daysRemaining %> days</span>
+                <% } else if (daysRemaining <= 0) { %>
+                  <span class="badge bg-danger">Expired</span>
+                <% } %>
+              <% } else { %>
+                Never
+              <% } %>
+            </td>
+            <td>
+              <% if (key.active) { %>
+                <span class="badge bg-success">Active</span>
+              <% } else { %>
+                <span class="badge bg-danger">Inactive</span>
+              <% } %>
+            </td>
+            <td>
+              <a href="/dashboard/api-keys/<%= key._id %>" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-eye"></i>
+              </a>
+              <% if ((user.role === 'admin') && key.active) { %>
+                <form action="/dashboard/api-keys/<%= key._id %>/revoke" method="POST" class="d-inline">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to revoke this API key? This action cannot be undone.')">
+                    <i class="bi bi-x-circle"></i>
+                  </button>
+                </form>
+              <% } %>
+            </td>
+          </tr>
+        <% }); %>
+      <% } %>
+    </tbody>
+  </table>
+</div> 

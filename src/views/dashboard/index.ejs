@@ -1,0 +1,75 @@
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">Dashboard</h1>
+</div>
+
+<div class="row">
+  <div class="col-md-6 col-lg-3 mb-4">
+    <div class="card h-100">
+      <div class="card-body">
+        <h5 class="card-title"><i class="bi bi-key text-primary"></i> API Keys</h5>
+        <p class="card-text display-4"><%= stats.activeApiKeys %></p>
+        <p class="card-text text-muted">Active API keys</p>
+      </div>
+      <div class="card-footer bg-white border-0">
+        <a href="/dashboard/api-keys" class="btn btn-sm btn-outline-primary">View all</a>
+        <% if (user.role === 'admin' || user.role === 'manager') { %>
+          <a href="/dashboard/api-keys/create" class="btn btn-sm btn-primary">Create new</a>
+        <% } %>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-6 col-lg-3 mb-4">
+    <div class="card h-100">
+      <div class="card-body">
+        <h5 class="card-title"><i class="bi bi-people text-success"></i> Users</h5>
+        <p class="card-text display-4"><%= stats.users %></p>
+        <p class="card-text text-muted">Dashboard users</p>
+      </div>
+      <div class="card-footer bg-white border-0">
+        <% if (user.role === 'admin') { %>
+          <a href="/dashboard/users" class="btn btn-sm btn-outline-success">Manage users</a>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row mt-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        Quick Actions
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6 col-lg-4 mb-3">
+            <div class="d-grid">
+              <a href="/dashboard/api-keys" class="btn btn-outline-primary">
+                <i class="bi bi-key"></i> Manage API Keys
+              </a>
+            </div>
+          </div>
+          
+          <% if (user.role === 'admin') { %>
+            <div class="col-md-6 col-lg-4 mb-3">
+              <div class="d-grid">
+                <a href="/dashboard/users" class="btn btn-outline-success">
+                  <i class="bi bi-people"></i> Manage Users
+                </a>
+              </div>
+            </div>
+            
+            <div class="col-md-6 col-lg-4 mb-3">
+              <div class="d-grid">
+                <a href="/dashboard/settings" class="btn btn-outline-secondary">
+                  <i class="bi bi-gear"></i> System Settings
+                </a>
+              </div>
+            </div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div> 

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= typeof title !== 'undefined' ? title + ' - ' : '' %>File Manager Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <style>
+    .sidebar {
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      z-index: 100;
+      padding: 48px 0 0;
+      box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+    }
+    .sidebar-sticky {
+      position: sticky;
+      top: 0;
+      height: calc(100vh - 48px);
+      padding-top: .5rem;
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+    .navbar-brand {
+      padding-top: .75rem;
+      padding-bottom: .75rem;
+      background-color: rgba(0, 0, 0, .25);
+      box-shadow: inset -1px 0 0 rgba(0, 0, 0, .25);
+    }
+    .nav-link {
+      font-weight: 500;
+      color: #333;
+    }
+    .nav-link.active {
+      color: #2470dc;
+    }
+  </style>
+</head>
+<body>
+  <header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
+    <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3 fs-6" href="/dashboard">File Manager</a>
+    <button class="navbar-toggler position-absolute d-md-none collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="navbar-nav">
+      <div class="nav-item text-nowrap">
+        <% if (user) { %>
+          <span class="nav-link px-3 text-white">Welcome, <%= user.name %></span>
+          <a class="nav-link px-3" href="/dashboard/logout">Sign out</a>
+        <% } %>
+      </div>
+    </div>
+  </header>
+
+  <div class="container-fluid">
+    <div class="row">
+      <% if (user) { %>
+        <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+          <div class="position-sticky pt-3 sidebar-sticky">
+            <ul class="nav flex-column">
+              <li class="nav-item">
+                <a class="nav-link <%= typeof active !== 'undefined' && active === 'dashboard' ? 'active' : '' %>" href="/dashboard">
+                  <i class="bi bi-speedometer2"></i> Dashboard
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link <%= typeof active !== 'undefined' && active === 'api-keys' ? 'active' : '' %>" href="/dashboard/api-keys">
+                  <i class="bi bi-key"></i> API Keys
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link <%= typeof active !== 'undefined' && active === 'news-posts' ? 'active' : '' %>" href="/dashboard/news-posts">
+                  <i class="bi bi-newspaper"></i> News Posts
+                </a>
+              </li>
+              <% if (user.role === 'admin') { %>
+                <li class="nav-item">
+                  <a class="nav-link <%= typeof active !== 'undefined' && active === 'users' ? 'active' : '' %>" href="/dashboard/users">
+                    <i class="bi bi-people"></i> Users
+                  </a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link <%= typeof active !== 'undefined' && active === 'settings' ? 'active' : '' %>" href="/dashboard/settings">
+                    <i class="bi bi-gear"></i> Settings
+                  </a>
+                </li>
+              <% } %>
+            </ul>
+          </div>
+        </nav>
+      <% } %>
+      
+      <main class="<%= user ? 'col-md-9 ms-sm-auto col-lg-10 px-md-4' : 'col-12' %>">
+        <div class="mt-4">
+          <% if (messages && messages.success && messages.success.length > 0) { %>
+            <% messages.success.forEach(msg => { %>
+              <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <%= msg %>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            <% }) %>
+          <% } %>
+          
+          <% if (messages && messages.error && messages.error.length > 0) { %>
+            <% messages.error.forEach(msg => { %>
+              <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <%= msg %>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            <% }) %>
+          <% } %>
+
+          <% if (messages && messages.info && messages.info.length > 0) { %>
+            <% messages.info.forEach(msg => { %>
+              <div class="alert alert-info alert-dismissible fade show" role="alert">
+                <%= msg %>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            <% }) %>
+          <% } %>
+        </div>
+        
+        <%- body %>
+      </main>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 
