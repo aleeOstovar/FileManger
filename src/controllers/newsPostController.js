@@ -1,6 +1,6 @@
 const newsPostService = require('../services/newsPostService');
 const catchAsync = require('../utils/catchAsync');
-const AppError = require('../utils/AppError');
+const AppError = require('../utils/appError');
 const logger = require('../utils/logger');
 const { addFullUrl } = require('../utils/fileUtils');
 
@@ -16,32 +16,52 @@ const { addFullUrl } = require('../utils/fileUtils');
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required:
- *               - title
- *               - content
- *             properties:
- *               title:
- *                 type: string
- *               creator:
- *                 type: string
- *               sourceUrl:
- *                 type: string
- *               imageThumbnail:
- *                 type: string
- *               imagesUrl:
- *                 type: array
+ *             oneOf:
+ *               - type: object
+ *                 required:
+ *                   - title
+ *                   - content
+ *                 properties:
+ *                   title:
+ *                     type: string
+ *                   creator:
+ *                     type: string
+ *                   sourceUrl:
+ *                     type: string
+ *                   thumbnailImage:
+ *                     type: string
+ *                   imagesUrl:
+ *                     type: array
+ *                     items:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                         url:
+ *                           type: string
+ *                         caption:
+ *                           type: string
+ *                         type:
+ *                           type: string
+ *                   content:
+ *                     type: array
+ *                     items:
+ *                       type: string
+ *                   tags:
+ *                     type: array
+ *                     items:
+ *                       type: string
+ *                   sourceDate:
+ *                     type: string
+ *                     format: date
+ *               - type: array
  *                 items:
- *                   type: string
- *               content:
- *                 type: string
- *               tags:
- *                 type: array
- *                 items:
- *                   type: string
- *               sourceDate:
- *                 type: string
- *                 format: date-time
+ *                   type: object
+ *                   properties:
+ *                     title:
+ *                       type: string
+ *                     json:
+ *                       type: object
  *     responses:
  *       201:
  *         description: News post created successfully
@@ -57,7 +77,192 @@ const { addFullUrl } = require('../utils/fileUtils');
  *                   $ref: '#/components/schemas/NewsPost'
  */
 exports.createNewsPost = catchAsync(async (req, res, next) => {
-  const newsPost = await newsPostService.createNewsPost(req.body);
+  // Log the full request body for debugging
+  logger.info(`Request body type: ${typeof req.body}`);
+  logger.info(`Request body is array: ${Array.isArray(req.body)}`);
+  if (Array.isArray(req.body)) {
+    logger.info(`Array length: ${req.body.length}`);
+    logger.info(`First item in array: ${JSON.stringify(req.body[0])}`);
+  } else {
+    logger.info(`Full request body: ${JSON.stringify(req.body)}`);
+  }
+  
+  // Check if the body is an array, extract the first item if it is
+  let postData = Array.isArray(req.body) && req.body.length > 0 ? req.body[0] : req.body;
+  logger.info(`Post data after array check: ${JSON.stringify(postData)}`);
+  
+  // Check if we've got a nested 'json' structure and extract from it
+  if (postData && postData.json && typeof postData.json === 'object') {
+    postData = postData.json;
+    logger.info('Extracted data from json property');
+    logger.info(`Post data after json extraction: ${JSON.stringify(postData)}`);
+  }
+  
+  // Debug: log keys
+  if (postData) {
+    logger.info(`Available keys in postData: ${Object.keys(postData)}`);
+    if (postData.title) {
+      logger.info(`Title found: ${postData.title}`);
+    } else {
+      logger.info('Title is missing or undefined');
+    }
+  } else {
+    logger.info('postData is null or undefined');
+  }
+  
+  // Process the content field to ensure it's an array
+  if (postData && postData.content) {
+    if (typeof postData.content === 'string') {
+      // Convert string to array with paragraphs split by newlines
+      postData.content = postData.content.split(/\n{2,}/);
+      logger.info('Converted content string to array by splitting paragraphs');
+    } else if (!Array.isArray(postData.content)) {
+      // If not array or string, try to convert to string then array
+      try {
+        const contentStr = String(postData.content);
+        postData.content = [contentStr];
+        logger.info('Converted non-string content to string array');
+      } catch (e) {
+        logger.error(`Failed to convert content: ${e.message}`);
+        postData.content = ['Content conversion error'];
+      }
+    }
+  }
+  
+  // Handle imagesUrl if it's a string instead of an array
+  if (postData && postData.imagesUrl) {
+    logger.info(`imagesUrl type: ${typeof postData.imagesUrl}`);
+    
+    // If it's a string, attempt to parse it
+    if (typeof postData.imagesUrl === 'string') {
+      try {
+        const parsed = JSON.parse(postData.imagesUrl);
+        postData.imagesUrl = parsed;
+        logger.info('Successfully parsed imagesUrl as JSON');
+      } catch (e) {
+        logger.error(`JSON parsing failed: ${e.message}`);
+        
+        // Try a different approach - sometimes Python sends JS literal notation
+        try {
+          // Convert to a valid JSON string first by replacing single quotes with double
+          const jsonStr = postData.imagesUrl
+            .replace(/'/g, '"')
+            .replace(/(\w+):/g, '"$1":');  // Convert JS property names to JSON format
+          
+          const parsed = JSON.parse(jsonStr);
+          postData.imagesUrl = parsed;
+          logger.info('Successfully parsed imagesUrl after string conversion');
+        } catch (err) {
+          logger.error(`All parsing attempts failed: ${err.message}`);
+          // Set to empty array to avoid validation errors
+          postData.imagesUrl = [];
+        }
+      }
+    }
+    
+    // Handle case where it might be an array of strings
+    if (Array.isArray(postData.imagesUrl) && postData.imagesUrl.length > 0) {
+      if (typeof postData.imagesUrl[0] === 'string') {
+        try {
+          postData.imagesUrl = postData.imagesUrl.map(item => {
+            if (typeof item === 'string') {
+              return JSON.parse(item.replace(/'/g, '"').replace(/(\w+):/g, '"$1":'));
+            }
+            return item;
+          });
+          logger.info('Processed string items in imagesUrl array');
+        } catch (error) {
+          logger.error(`Failed to process array items: ${error.message}`);
+        }
+      }
+      
+      // Ensure each object has the expected structure
+      postData.imagesUrl = postData.imagesUrl.map(item => {
+        if (typeof item === 'object' && item !== null) {
+          return {
+            id: item.id || '',
+            url: item.url || '',
+            caption: item.caption || '',
+            type: item.type || 'figure'
+          };
+        }
+        return item;
+      });
+    }
+  }
+  
+  // Process content that might contain image placeholders
+  if (postData && postData.content && Array.isArray(postData.content) && postData.imagesUrl && Array.isArray(postData.imagesUrl)) {
+    // Map content array to replace image placeholders
+    postData.content = postData.content.map(paragraph => {
+      if (typeof paragraph === 'string') {
+        // Look for image placeholders like **image_image0**
+        const imageRegex = /\*\*image_image(\d+)\*\*/g;
+        
+        return paragraph.replace(imageRegex, (match, imageIdNum) => {
+          const imageIndex = parseInt(imageIdNum, 10);
+          // Find the image with matching id
+          if (postData.imagesUrl[imageIndex]) {
+            // Return an empty string - the image is already in imagesUrl
+            return '';
+          }
+          return match; // Keep the placeholder if no matching image
+        });
+      }
+      return paragraph;
+    });
+    
+    // Filter out any empty paragraphs that might have resulted from removing image placeholders
+    postData.content = postData.content.filter(paragraph => paragraph.trim() !== '');
+  }
+  
+  // Basic validation
+  if (!postData || !postData.title) {
+    logger.error('Missing title in news post data');
+    
+    // Try to handle more complex nested structures
+    if (postData) {
+      // Check for nested objects that might contain the post data
+      const possibleDataFields = ['data', 'post', 'newsPost', 'item', 'article'];
+      
+      for (const field of possibleDataFields) {
+        if (postData[field] && typeof postData[field] === 'object' && postData[field].title) {
+          logger.info(`Found title in ${field} property`);
+          postData = postData[field];
+          break;
+        }
+      }
+      
+      // If there's a 0 index property (might be array-like object)
+      if (postData[0] && typeof postData[0] === 'object' && postData[0].title) {
+        logger.info(`Found title in index 0`);
+        postData = postData[0];
+      }
+      
+      // One last check after our attempts to find the data
+      if (postData.title) {
+        logger.info(`Found title after additional checks: ${postData.title}`);
+      } else {
+        return next(new AppError('Title is required', 400));
+      }
+    } else {
+      return next(new AppError('Title is required', 400));
+    }
+  }
+  
+  if (!postData.content || !Array.isArray(postData.content) || postData.content.length === 0) {
+    logger.error('Missing or invalid content in news post data');
+    // If content is a string, convert to array
+    if (typeof postData.content === 'string') {
+      postData.content = [postData.content];
+      logger.info('Converted content string to array');
+    } else {
+      return next(new AppError('Content must be a non-empty array of strings', 400));
+    }
+  }
+  
+  // Create the news post
+  const newsPost = await newsPostService.createNewsPost(postData);
   
   res.status(201).json({
     status: 'success',

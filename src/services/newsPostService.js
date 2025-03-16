@@ -48,7 +48,7 @@ exports.createNewsPost = async (postData) => {
     const newsPosts = loadNewsPosts();
     const newPost = {
       ...postData,
-      _id: mongoose.Types.ObjectId().toString(),
+      _id: new mongoose.Types.ObjectId().toString(),
       createdAt: new Date(),
       updatedAt: new Date()
     };

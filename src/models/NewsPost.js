@@ -29,10 +29,21 @@ const Schema = mongoose.Schema;
  *         imagesUrl:
  *           type: array
  *           items:
- *             type: string
- *           description: Array of image URLs related to the post
+ *             type: object
+ *             properties:
+ *               id:
+ *                 type: string
+ *               url:
+ *                 type: string
+ *               caption:
+ *                 type: string
+ *               type:
+ *                 type: string
+ *           description: Array of image objects related to the post
  *         content:
- *           type: string
+ *           type: array
+ *           items:
+ *             type: string
  *           description: Main content of the news post
  *         tags:
  *           type: array
@@ -60,8 +71,14 @@ const newsPostSchema = new Schema(
       trim: true,
     },
     content: {
-      type: String,
+      type: [String],
       required: [true, 'A news post must have content'],
+      validate: {
+        validator: function(v) {
+          return Array.isArray(v) && v.length > 0;
+        },
+        message: 'Content must be a non-empty array of strings'
+      }
     },
     status: {
       type: String,
@@ -76,13 +93,29 @@ const newsPostSchema = new Schema(
       type: String,
       trim: true,
     },
+    thumbnailImage: {
+      type: String,
+      trim: true,
+    },
     imageThumbnail: {
       type: String,
       trim: true,
     },
     imagesUrl: {
-      type: [String],
+      type: mongoose.Schema.Types.Mixed,
       default: [],
+      set: function(v) {
+        // Handle different formats - string, array of strings, or array of objects
+        if (typeof v === 'string') {
+          try {
+            return JSON.parse(v);
+          } catch (e) {
+            console.log('Error parsing imagesUrl string:', e);
+            return [];
+          }
+        }
+        return v;
+      }
     },
     tags: {
       type: [String],
@@ -107,6 +140,40 @@ newsPostSchema.index({ status: 1, createdAt: -1 });
 
 // Index for tags for efficient filtering
 newsPostSchema.index({ tags: 1 });
+
+// Add a pre-save middleware to handle imagesUrl
+newsPostSchema.pre('save', function(next) {
+  // Handle imagesUrl if it's a string or contains strings
+  if (this.imagesUrl) {
+    if (typeof this.imagesUrl === 'string') {
+      try {
+        this.imagesUrl = JSON.parse(this.imagesUrl);
+      } catch (e) {
+        // If parsing fails, set to empty array to avoid validation errors
+        this.imagesUrl = [];
+      }
+    } else if (Array.isArray(this.imagesUrl)) {
+      // Ensure each item is an object with the expected structure
+      this.imagesUrl = this.imagesUrl.map(item => {
+        if (typeof item === 'string') {
+          try {
+            return JSON.parse(item);
+          } catch (e) {
+            // Return a default object if parsing fails
+            return {
+              id: 'default',
+              url: '',
+              caption: '',
+              type: 'figure'
+            };
+          }
+        }
+        return item;
+      });
+    }
+  }
+  next();
+});
 
 /**
  * Static method to get post statistics by status

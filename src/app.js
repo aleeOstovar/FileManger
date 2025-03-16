@@ -163,8 +163,8 @@ app.use(session({
 app.use(flash());
 
 // Body parser
-app.use(express.json({ limit: '10kb' }));
-app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Data sanitization against NoSQL query injection
 app.use(mongoSanitize());
