@@ -103,36 +103,40 @@ router.post(
  */
 const newsPostController = require('../controllers/newsPostController');
 
-router.get('/news-posts', authController.protect, dashboardController.getNewsPostsPage);
+router.get('/news-posts', authController.protect, csrfProtection, dashboardController.getNewsPostsPage);
 
 // Restricted to admin and manager roles for creation and editing
 router.get(
   '/news-posts/create', 
   authController.protect, 
-  authController.restrictTo('admin', 'manager'), 
+  authController.restrictTo('admin', 'manager'),
+  csrfProtection,
   dashboardController.getCreateNewsPostPage
 );
 
 router.post(
   '/news-posts/create', 
   authController.protect, 
-  authController.restrictTo('admin', 'manager'), 
+  authController.restrictTo('admin', 'manager'),
+  csrfProtection,
   dashboardController.createNewsPost
 );
 
-router.get('/news-posts/:id', authController.protect, dashboardController.getNewsPostPage);
+router.get('/news-posts/:id', authController.protect, csrfProtection, dashboardController.getNewsPostPage);
 
 router.get(
   '/news-posts/:id/edit', 
   authController.protect, 
-  authController.restrictTo('admin', 'manager'), 
+  authController.restrictTo('admin', 'manager'),
+  csrfProtection,
   dashboardController.getEditNewsPostPage
 );
 
 router.post(
   '/news-posts/:id/edit', 
   authController.protect, 
-  authController.restrictTo('admin', 'manager'), 
+  authController.restrictTo('admin', 'manager'),
+  csrfProtection,
   dashboardController.updateNewsPost
 );
 
@@ -140,7 +144,8 @@ router.post(
 router.post(
   '/news-posts/:id/delete', 
   authController.protect, 
-  authController.restrictTo('admin'), 
+  authController.restrictTo('admin'),
+  csrfProtection,
   dashboardController.deleteNewsPost
 );
 
@@ -165,6 +170,20 @@ router.get('/settings', authController.restrictTo('admin'), csrfProtection, (req
       info: req.flash('info')
     },
     csrfToken: req.csrfToken()
+  });
+});
+
+// Scraper Dashboard - Admin and manager only
+router.get('/scraper', authController.restrictTo('admin', 'manager'), csrfProtection, (req, res) => {
+  res.render('dashboard/scraper', {
+    title: 'News Scraper',
+    active: 'scraper',
+    csrfToken: req.csrfToken(),
+    messages: {
+      error: req.flash('error'),
+      success: req.flash('success'),
+      info: req.flash('info')
+    }
   });
 });
 

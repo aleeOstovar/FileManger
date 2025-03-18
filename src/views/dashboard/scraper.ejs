@@ -1,0 +1,212 @@
+<%- contentFor('title') %>News Scraper Dashboard
+
+<%- contentFor('content') %>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">News Scraper Status</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="info-box">
+                                <span class="info-box-icon bg-info"><i class="fas fa-clock"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Next Run</span>
+                                    <span class="info-box-number" id="nextRun">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="info-box">
+                                <span class="info-box-icon bg-success"><i class="fas fa-check"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Last Run</span>
+                                    <span class="info-box-number" id="lastRun">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="info-box">
+                                <span class="info-box-icon bg-warning"><i class="fas fa-newspaper"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Total Articles</span>
+                                    <span class="info-box-number" id="totalArticles">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Source Statistics</h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Source</th>
+                                    <th>Articles</th>
+                                    <th>Last Run</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sourceStats">
+                                <tr>
+                                    <td colspan="3" class="text-center">Loading...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Manual Trigger</h3>
+                </div>
+                <div class="card-body">
+                    <form id="triggerForm">
+                        <div class="form-group">
+                            <label for="source">Select Source (Optional)</label>
+                            <select class="form-control" id="source">
+                                <option value="">All Sources</option>
+                                <!-- Options will be dynamically populated -->
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-play"></i> Trigger Scraping
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- contentFor('scripts') %>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Populate source dropdown
+    async function populateSourceDropdown() {
+        try {
+            const response = await fetch('/api/v1/scraper/status');
+            const data = await response.json();
+            
+            const sourceSelect = document.getElementById('source');
+            // Clear existing options except "All Sources"
+            while (sourceSelect.options.length > 1) {
+                sourceSelect.options.remove(1);
+            }
+            
+            // Add enabled sources
+            if (data.enabled_sources && data.enabled_sources.length > 0) {
+                data.enabled_sources.forEach(source => {
+                    const option = document.createElement('option');
+                    option.value = source;
+                    option.textContent = source;
+                    sourceSelect.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error('Error populating source dropdown:', error);
+        }
+    }
+    
+    // Call initially
+    populateSourceDropdown();
+    
+    // Function to update dashboard data
+    async function updateDashboard() {
+        try {
+            // Fetch status
+            const statusResponse = await fetch('/api/v1/scraper/status');
+            const statusData = await statusResponse.json();
+            
+            // Update status information
+            const nextRun = statusData.scheduler?.next_run || 'Not scheduled';
+            const lastRun = statusData.scheduler?.last_run || 'Never';
+            
+            document.getElementById('nextRun').textContent = nextRun === 'Not scheduled' ? nextRun : new Date(nextRun).toLocaleString();
+            document.getElementById('lastRun').textContent = lastRun === 'Never' ? lastRun : new Date(lastRun).toLocaleString();
+            
+            // Fetch stats
+            const statsResponse = await fetch('/api/v1/scraper/stats');
+            const statsData = await statsResponse.json();
+            
+            // Update total articles
+            document.getElementById('totalArticles').textContent = statsData.total_articles || 0;
+            
+            // Update source statistics
+            if (statsData.sources && Object.keys(statsData.sources).length > 0) {
+                const sourceStatsHtml = Object.entries(statsData.sources)
+                    .map(([source, data]) => `
+                        <tr>
+                            <td>${source}</td>
+                            <td>${data.articles_count || 0}</td>
+                            <td>${data.last_run ? new Date(data.last_run).toLocaleString() : 'Never'}</td>
+                        </tr>
+                    `).join('');
+                
+                document.getElementById('sourceStats').innerHTML = sourceStatsHtml;
+            } else {
+                document.getElementById('sourceStats').innerHTML = '<tr><td colspan="3" class="text-center">No data available</td></tr>';
+            }
+            
+        } catch (error) {
+            console.error('Error updating dashboard:', error);
+            document.getElementById('nextRun').textContent = 'Error';
+            document.getElementById('lastRun').textContent = 'Error';
+            document.getElementById('totalArticles').textContent = 'Error';
+            document.getElementById('sourceStats').innerHTML = '<tr><td colspan="3" class="text-center">Error loading data</td></tr>';
+        }
+    }
+    
+    // Update dashboard every 30 seconds
+    updateDashboard();
+    setInterval(updateDashboard, 30000);
+    
+    // Handle manual trigger form submission
+    document.getElementById('triggerForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const source = document.getElementById('source').value;
+        const button = this.querySelector('button[type="submit"]');
+        
+        try {
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Triggering...';
+            
+            const response = await fetch(`/api/v1/scraper/trigger${source ? `?source=${source}` : ''}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                alert('Scraping triggered successfully!');
+                updateDashboard();
+            } else {
+                throw new Error(data.error || 'Failed to trigger scraping');
+            }
+        } catch (error) {
+            alert('Error triggering scraping: ' + error.message);
+        } finally {
+            button.disabled = false;
+            button.innerHTML = '<i class="fas fa-play"></i> Trigger Scraping';
+        }
+    });
+});
+</script> 

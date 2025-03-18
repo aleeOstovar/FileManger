@@ -354,7 +354,13 @@ exports.getNewsPostsPage = catchAsync(async (req, res) => {
     },
     currentStatus: status,
     searchTerm: searchTerm,
-    active: 'news-posts'
+    active: 'news-posts',
+    csrfToken: req.csrfToken ? req.csrfToken() : null,
+    messages: {
+      error: req.flash('error'),
+      success: req.flash('success'),
+      info: req.flash('info')
+    }
   });
 });
 
@@ -367,7 +373,13 @@ exports.getCreateNewsPostPage = catchAsync(async (req, res) => {
     newsPost: null,
     isEditing: false,
     formAction: '/dashboard/news-posts/create',
-    active: 'news-posts'
+    active: 'news-posts',
+    csrfToken: req.csrfToken ? req.csrfToken() : null,
+    messages: {
+      error: req.flash('error'),
+      success: req.flash('success'),
+      info: req.flash('info')
+    }
   });
 });
 
@@ -410,17 +422,25 @@ exports.createNewsPost = catchAsync(async (req, res) => {
  * Render a single News Post details page
  */
 exports.getNewsPostPage = catchAsync(async (req, res) => {
-  const newsPost = await newsPostService.getNewsPostById(req.params.id);
+  const { id } = req.params;
+  
+  const newsPost = await newsPostService.getNewsPostById(id);
   
   if (!newsPost) {
     req.flash('error', 'News post not found');
     return res.redirect('/dashboard/news-posts');
   }
   
-  res.render('dashboard/news-posts/show', {
+  res.render('dashboard/news-posts/view', {
     title: newsPost.title,
     newsPost,
-    active: 'news-posts'
+    active: 'news-posts',
+    csrfToken: req.csrfToken ? req.csrfToken() : null,
+    messages: {
+      error: req.flash('error'),
+      success: req.flash('success'),
+      info: req.flash('info')
+    }
   });
 });
 
@@ -428,7 +448,9 @@ exports.getNewsPostPage = catchAsync(async (req, res) => {
  * Render the form to edit a News Post
  */
 exports.getEditNewsPostPage = catchAsync(async (req, res) => {
-  const newsPost = await newsPostService.getNewsPostById(req.params.id);
+  const { id } = req.params;
+  
+  const newsPost = await newsPostService.getNewsPostById(id);
   
   if (!newsPost) {
     req.flash('error', 'News post not found');
@@ -436,11 +458,17 @@ exports.getEditNewsPostPage = catchAsync(async (req, res) => {
   }
   
   res.render('dashboard/news-posts/form', {
-    title: `Edit: ${newsPost.title}`,
+    title: `Edit ${newsPost.title}`,
     newsPost,
     isEditing: true,
-    formAction: `/dashboard/news-posts/${newsPost._id}/edit`,
-    active: 'news-posts'
+    formAction: `/dashboard/news-posts/${id}/edit`,
+    active: 'news-posts',
+    csrfToken: req.csrfToken ? req.csrfToken() : null,
+    messages: {
+      error: req.flash('error'),
+      success: req.flash('success'),
+      info: req.flash('info')
+    }
   });
 });
 

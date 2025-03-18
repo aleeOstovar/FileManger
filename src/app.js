@@ -32,6 +32,7 @@ const videoRoutes = require('./routes/videoRoutes');
 const apiKeyRoutes = require('./routes/apiKeyRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const newsPostRoutes = require('./routes/newsPostRoutes');
+const scraperRoutes = require('./routes/scraperRoutes');
 
 // Create Express app
 const app = express();
@@ -248,6 +249,7 @@ app.get('/api/health', (req, res) => {
 // Protected API routes
 app.use('/api/v1/api-keys', apiKeyRoutes);
 app.use('/api/v1/news-posts', newsPostRoutes);
+app.use('/api/v1/scraper', scraperRoutes);
 
 // All file management routes require authentication
 app.use('/api/v1/files', protect, fileRoutes);

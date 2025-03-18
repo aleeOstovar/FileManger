@@ -76,6 +76,13 @@
                   <i class="bi bi-newspaper"></i> News Posts
                 </a>
               </li>
+              <% if (user.role === 'admin' || user.role === 'manager') { %>
+                <li class="nav-item">
+                  <a class="nav-link <%= typeof active !== 'undefined' && active === 'scraper' ? 'active' : '' %>" href="/dashboard/scraper">
+                    <i class="bi bi-robot"></i> News Scraper
+                  </a>
+                </li>
+              <% } %>
               <% if (user.role === 'admin') { %>
                 <li class="nav-item">
                   <a class="nav-link <%= typeof active !== 'undefined' && active === 'users' ? 'active' : '' %>" href="/dashboard/users">

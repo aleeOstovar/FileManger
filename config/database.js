@@ -27,7 +27,12 @@ const connectDB = async () => {
           if (!mongoURI.includes('@')) {
             // URI format: mongodb+srv://host/
             const [protocol, host] = mongoURI.split('//');
-            mongoURI = `${protocol}//${encodeURIComponent(username)}:${encodeURIComponent(password)}@${host}`;
+            
+            // Properly encode the username and password for URI
+            const encodedUsername = encodeURIComponent(username);
+            const encodedPassword = encodeURIComponent(password);
+            
+            mongoURI = `${protocol}//${encodedUsername}:${encodedPassword}@${host}`;
             logger.info('Constructed MongoDB connection string from parts');
           }
         } 
@@ -37,7 +42,12 @@ const connectDB = async () => {
           if (!mongoURI.includes('@')) {
             // URI format: mongodb://host:port/
             const [protocol, host] = mongoURI.split('//');
-            mongoURI = `${protocol}//${encodeURIComponent(username)}:${encodeURIComponent(password)}@${host}`;
+            
+            // Properly encode the username and password for URI
+            const encodedUsername = encodeURIComponent(username);
+            const encodedPassword = encodeURIComponent(password);
+            
+            mongoURI = `${protocol}//${encodedUsername}:${encodedPassword}@${host}`;
           }
         }
       }
@@ -49,15 +59,15 @@ const connectDB = async () => {
     const conn = await mongoose.connect(mongoURI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 10000, // 10 second timeout for Windows
+      serverSelectionTimeoutMS: 15000, // 15 second timeout for Windows
       socketTimeoutMS: 45000, // 45 second socket timeout
     });
     
     logger.info(`MongoDB Connected: ${conn.connection.host}`);
+    return conn;
   } catch (error) {
     logger.error(`Error connecting to MongoDB: ${error.message}`);
-    // Exit process with failure
-    process.exit(1);
+    throw error; // Let the server.js handle the error
   }
 };
 
