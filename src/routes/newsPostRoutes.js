@@ -18,6 +18,7 @@ router.get('/:id', newsPostController.getNewsPost);
 
 // Protected routes (require API key authentication)
 router.use(protect);
+router.post('/check', newsPostController.checkArticleExists);
 router.post('/', newsPostController.createNewsPost);
 router.patch('/:id', newsPostController.updateNewsPost);
 router.delete('/:id', newsPostController.deleteNewsPost);

@@ -611,4 +611,55 @@ exports.editNewsPostForm = catchAsync(async (req, res) => {
     },
     csrfToken: req.csrfToken ? req.csrfToken() : null
   });
+});
+
+/**
+ * @swagger
+ * /api/v1/news-posts/check:
+ *   post:
+ *     summary: Check if an article exists
+ *     description: Check if an article with the given source URL already exists
+ *     tags: [News Posts]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - sourceUrl
+ *             properties:
+ *               sourceUrl:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Check successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 exists:
+ *                   type: boolean
+ */
+exports.checkArticleExists = catchAsync(async (req, res, next) => {
+  // Extract sourceUrl from request body
+  const { sourceUrl } = req.body;
+  
+  // Validate that sourceUrl is provided
+  if (!sourceUrl) {
+    return next(new AppError('Source URL is required', 400));
+  }
+  
+  logger.info(`Checking if article exists with source URL: ${sourceUrl}`);
+  
+  // Check if the article exists
+  const exists = await newsPostService.checkIfArticleExists(sourceUrl);
+  
+  logger.info(`Article exists: ${exists}`);
+  
+  // Return the result
+  res.status(200).json({
+    exists
+  });
 }); 

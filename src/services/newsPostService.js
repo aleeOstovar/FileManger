@@ -368,4 +368,25 @@ exports.getNewsPostsByTag = async (tag, page = 1, limit = 10) => {
   ]);
   
   return { data: results, total };
+};
+
+/**
+ * Check if an article with the given source URL already exists in the database
+ * @param {string} sourceUrl - The source URL to check
+ * @returns {Promise<boolean>} True if the article exists, false otherwise
+ */
+exports.checkIfArticleExists = async (sourceUrl) => {
+  logger.info(`Checking if article with source URL exists: ${sourceUrl}`);
+  
+  if (useMemoryStore) {
+    const newsPosts = loadNewsPosts();
+    const exists = newsPosts.some(post => post.sourceUrl === sourceUrl);
+    logger.info(`Article exists in memory store: ${exists}`);
+    return exists;
+  }
+  
+  // Count documents with the given sourceUrl
+  const count = await NewsPost.countDocuments({ sourceUrl });
+  logger.info(`Found ${count} articles with sourceUrl: ${sourceUrl}`);
+  return count > 0;
 }; 

@@ -248,14 +248,12 @@ app.get('/api/health', (req, res) => {
 
 // Protected API routes
 app.use('/api/v1/api-keys', apiKeyRoutes);
+app.use('/api/v1/files', fileRoutes);
+app.use('/api/v1/images', imageRoutes);
+app.use('/api/v1/documents', documentRoutes);
+app.use('/api/v1/videos', videoRoutes);
 app.use('/api/v1/news-posts', newsPostRoutes);
 app.use('/api/v1/scraper', scraperRoutes);
-
-// All file management routes require authentication
-app.use('/api/v1/files', protect, fileRoutes);
-app.use('/api/v1/images', protect, imageRoutes);
-app.use('/api/v1/documents', protect, documentRoutes);
-app.use('/api/v1/videos', protect, videoRoutes);
 
 // 404 handler
 app.use(notFound);

@@ -1,14 +1,18 @@
 const express = require('express');
-const router = express.Router();
 const scraperController = require('../controllers/scraperController');
+const authController = require('../controllers/authController');
 
-// Get scraper status
-router.get('/status', scraperController.getStatus);
+const router = express.Router();
 
-// Get scraper statistics
-router.get('/stats', scraperController.getStats);
+// Protect all routes after this middleware
+router.use(authController.protect);
 
-// Trigger scraping
-router.post('/trigger', scraperController.triggerScraping);
+// API Routes
+router.get('/status', scraperController.getScraperStatus);
+router.get('/stats', scraperController.getScraperStats);
+router.get('/progress', scraperController.getScraperProgress);
+router.get('/', scraperController.getScrapers);
+router.post('/:id/run', scraperController.runScraper);
+router.get('/:scraperId/progress/:jobId', scraperController.getJobProgress);
 
 module.exports = router; 

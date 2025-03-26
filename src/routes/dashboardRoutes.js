@@ -6,6 +6,7 @@ const csrf = require('csurf');
 const catchAsync = require('../utils/catchAsync');
 const newsPostService = require('../services/newsPostService');
 const { protect, restrictTo } = require('../middlewares/auth');
+const scraperController = require('../controllers/scraperController');
 
 const router = express.Router();
 
@@ -173,18 +174,27 @@ router.get('/settings', authController.restrictTo('admin'), csrfProtection, (req
   });
 });
 
-// Scraper Dashboard - Admin and manager only
-router.get('/scraper', authController.restrictTo('admin', 'manager'), csrfProtection, (req, res) => {
-  res.render('dashboard/scraper', {
-    title: 'News Scraper',
-    active: 'scraper',
-    csrfToken: req.csrfToken(),
-    messages: {
-      error: req.flash('error'),
-      success: req.flash('success'),
-      info: req.flash('info')
-    }
-  });
+// Scraper Dashboard and actions
+router.get('/scraper', csrfProtection, scraperController.renderScraperDashboard);
+router.post('/scraper/:scraperId/run', authController.restrictTo('admin', 'manager'), csrfProtection, (req, res) => {
+  // Set scraperId in req.params
+  const { scraperId } = req.params;
+  req.params = { ...req.params, scraperId };
+  
+  // Call the runScraperWithProgress function
+  scraperController.runScraperWithProgress(req, res);
 });
+router.post('/scraper/:scraperId/stop', authController.restrictTo('admin', 'manager'), csrfProtection, (req, res) => {
+  // For now, just redirect back to the dashboard with a message
+  req.flash('info', 'Stop functionality is not yet implemented');
+  res.redirect('/dashboard/scraper');
+});
+router.get('/scraper/:scraperId/manual', authController.restrictTo('admin', 'manager'), csrfProtection, (req, res) => {
+  // For manual scraping we'll redirect to the run route for now
+  const { scraperId } = req.params;
+  req.flash('info', 'Manual scraping redirects to automatic scraping for now');
+  res.redirect(`/dashboard/scraper/${scraperId}/progress/manual-${Date.now()}`);
+});
+router.get('/scraper/:scraperId/progress/:jobId', csrfProtection, scraperController.getScrapingProgress);
 
 module.exports = router; 

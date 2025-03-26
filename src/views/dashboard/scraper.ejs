@@ -1,212 +1,277 @@
-<%- contentFor('title') %>News Scraper Dashboard
-
-<%- contentFor('content') %>
-<div class="container-fluid">
+<!-- Scraper Dashboard -->
+<div class="container-fluid px-4">
+    <h1 class="mt-4">News Scraper Dashboard</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="/dashboard">Dashboard</a></li>
+        <li class="breadcrumb-item active">News Scraper</li>
+    </ol>
+    
+    <!-- Status Card -->
     <div class="row">
-        <div class="col-12">
-            <div class="card">
+        <div class="col-xl-12">
+            <div class="card mb-4">
                 <div class="card-header">
-                    <h3 class="card-title">News Scraper Status</h3>
+                    <i class="fas fa-server me-1"></i>
+                    Scraper API Status
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="info-box">
-                                <span class="info-box-icon bg-info"><i class="fas fa-clock"></i></span>
-                                <div class="info-box-content">
-                                    <span class="info-box-text">Next Run</span>
-                                    <span class="info-box-number" id="nextRun">Loading...</span>
-                                </div>
-                            </div>
+                    <!-- Debug CSRF token -->
+                    <% if (typeof csrfToken !== 'undefined') { %>
+                        <!-- CSRF token is defined -->
+                    <% } else { %>
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle me-2"></i> CSRF token is not defined
                         </div>
-                        <div class="col-md-4">
-                            <div class="info-box">
-                                <span class="info-box-icon bg-success"><i class="fas fa-check"></i></span>
-                                <div class="info-box-content">
-                                    <span class="info-box-text">Last Run</span>
-                                    <span class="info-box-number" id="lastRun">Loading...</span>
-                                </div>
-                            </div>
+                    <% } %>
+                    
+                    <% if (apiStatus && apiStatus.status === 'running') { %>
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle me-2"></i> Scraper API is running
+                            <div class="mt-2"><small>API URL: <%= scraperApiUrl %></small></div>
                         </div>
-                        <div class="col-md-4">
-                            <div class="info-box">
-                                <span class="info-box-icon bg-warning"><i class="fas fa-newspaper"></i></span>
-                                <div class="info-box-content">
-                                    <span class="info-box-text">Total Articles</span>
-                                    <span class="info-box-number" id="totalArticles">Loading...</span>
-                                </div>
-                            </div>
+                    <% } else { %>
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle me-2"></i> Scraper API is not available
+                            <div class="mt-2"><small>Error: <%= apiStatus && apiStatus.message ? apiStatus.message : 'Failed to connect to the scraper API' %></small></div>
+                            <div class="mt-2"><small>API URL: <%= scraperApiUrl %></small></div>
                         </div>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Stats Cards -->
+    <div class="row">
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-primary text-white mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="small">Total Articles</div>
+                            <div class="h2"><%= stats && stats.articles ? stats.articles.total : 'N/A' %></div>
+                        </div>
+                        <i class="fas fa-newspaper fa-2x opacity-50"></i>
                     </div>
+                </div>
+                <div class="card-footer d-flex align-items-center justify-content-between">
+                    <a class="small text-white stretched-link" href="/dashboard/news-posts">View Articles</a>
+                    <div class="small text-white"><i class="fas fa-angle-right"></i></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-success text-white mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="small">Articles Last 24h</div>
+                            <div class="h2"><%= stats && stats.articles ? stats.articles.last24Hours : 'N/A' %></div>
+                        </div>
+                        <i class="fas fa-clock fa-2x opacity-50"></i>
+                    </div>
+                </div>
+                <div class="card-footer d-flex align-items-center justify-content-between">
+                    <a class="small text-white stretched-link" href="#">Recent Articles</a>
+                    <div class="small text-white"><i class="fas fa-angle-right"></i></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-warning text-white mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="small">Active Scrapers</div>
+                            <div class="h2"><%= stats && stats.scrapers ? stats.scrapers.active : 'N/A' %></div>
+                        </div>
+                        <i class="fas fa-robot fa-2x opacity-50"></i>
+                    </div>
+                </div>
+                <div class="card-footer d-flex align-items-center justify-content-between">
+                    <span class="small text-white stretched-link">Running Now</span>
+                    <div class="small text-white"><i class="fas fa-angle-down"></i></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-info text-white mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="small">Total Scrapers</div>
+                            <div class="h2"><%= stats && stats.scrapers ? stats.scrapers.total : 'N/A' %></div>
+                        </div>
+                        <i class="fas fa-cog fa-2x opacity-50"></i>
+                    </div>
+                </div>
+                <div class="card-footer d-flex align-items-center justify-content-between">
+                    <span class="small text-white stretched-link">Configured</span>
+                    <div class="small text-white"><i class="fas fa-angle-down"></i></div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="row">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">Source Statistics</h3>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-bordered">
-                            <thead>
-                                <tr>
-                                    <th>Source</th>
-                                    <th>Articles</th>
-                                    <th>Last Run</th>
-                                </tr>
-                            </thead>
-                            <tbody id="sourceStats">
-                                <tr>
-                                    <td colspan="3" class="text-center">Loading...</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+    <!-- Scrapers Table -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-robot me-1"></i>
+            Available Scrapers
         </div>
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">Manual Trigger</h3>
+        <div class="card-body">
+            <% if (scrapers && scrapers.length > 0) { %>
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="scrapersTable" width="100%" cellspacing="0">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Website</th>
+                                <th>Status</th>
+                                <th>Schedule</th>
+                                <th>Last Run</th>
+                                <th>Articles</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% scrapers.forEach(scraper => { %>
+                                <tr>
+                                    <td><%= scraper.id %></td>
+                                    <td><%= scraper.name %></td>
+                                    <td>
+                                        <% if (scraper.website_url) { %>
+                                            <a href="<%= scraper.website_url %>" target="_blank"><%= scraper.website_name || scraper.website_url %> <i class="fas fa-external-link-alt fa-xs"></i></a>
+                                        <% } else { %>
+                                            <%= scraper.website_name || 'N/A' %>
+                                        <% } %>
+                                    </td>
+                                    <td>
+                                        <% if (scraper.status === 'running') { %>
+                                            <span class="badge bg-success">Running</span>
+                                        <% } else if (scraper.status === 'idle') { %>
+                                            <span class="badge bg-secondary">Idle</span>
+                                        <% } else if (scraper.status === 'error') { %>
+                                            <span class="badge bg-danger">Error</span>
+                                        <% } else { %>
+                                            <span class="badge bg-info"><%= scraper.status %></span>
+                                        <% } %>
+                                    </td>
+                                    <td>
+                                        <% if (scraper.schedule) { %>
+                                            <code><%= scraper.schedule %></code>
+                                        <% } else { %>
+                                            <span class="text-muted">Not scheduled</span>
+                                        <% } %>
+                                    </td>
+                                    <td>
+                                        <% if (scraper.last_run) { %>
+                                            <%= new Date(scraper.last_run).toLocaleString() %>
+                                        <% } else { %>
+                                            <span class="text-muted">Never</span>
+                                        <% } %>
+                                    </td>
+                                    <td><%= scraper.articles_count || 0 %></td>
+                                    <td>
+                                        <div class="d-flex">
+                                            <% if (scraper.status === 'running') { %>
+                                                <form action="/dashboard/scraper/<%= scraper.id %>/stop" method="POST" class="me-2">
+                                                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                                    <button type="submit" class="btn btn-sm btn-warning">
+                                                        <i class="fas fa-stop"></i> Stop
+                                                    </button>
+                                                </form>
+                                            <% } else { %>
+                                                <form action="/dashboard/scraper/<%= scraper.id %>/run" method="POST" class="me-2">
+                                                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                                    <button type="submit" class="btn btn-sm btn-success">
+                                                        <i class="fas fa-play"></i> Run
+                                                    </button>
+                                                </form>
+                                            <% } %>
+                                            
+                                            <!-- Add Manual Scraping button -->
+                                            <a href="/dashboard/scraper/<%= scraper.id %>/manual" class="btn btn-sm btn-info me-2">
+                                                <i class="fas fa-code"></i> Manual Scrape
+                                            </a>
+                                            
+                                            <% if (scraper.schedule) { %>
+                                                <form action="/dashboard/scraper/<%= scraper.id %>/unschedule" method="POST">
+                                                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                        <i class="fas fa-calendar-times"></i> Unschedule
+                                                    </button>
+                                                </form>
+                                            <% } else { %>
+                                                <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#scheduleModal<%= scraper.id %>">
+                                                    <i class="fas fa-calendar-plus"></i> Schedule
+                                                </button>
+                                                
+                                                <!-- Schedule Modal -->
+                                                <div class="modal fade" id="scheduleModal<%= scraper.id %>" tabindex="-1" aria-labelledby="scheduleModalLabel<%= scraper.id %>" aria-hidden="true">
+                                                    <div class="modal-dialog">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <h5 class="modal-title" id="scheduleModalLabel<%= scraper.id %>">Schedule Scraper: <%= scraper.name %></h5>
+                                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                            </div>
+                                                            <form action="/dashboard/scraper/<%= scraper.id %>/schedule" method="POST">
+                                                                <div class="modal-body">
+                                                                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                                                    <div class="mb-3">
+                                                                        <label for="schedule" class="form-label">Schedule (Cron Expression)</label>
+                                                                        <input type="text" class="form-control" id="schedule" name="schedule" placeholder="0 */6 * * *" required>
+                                                                        <div class="form-text">
+                                                                            Example: <code>0 */6 * * *</code> (Every 6 hours)
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="alert alert-info">
+                                                                        <h6>Common Cron Expressions:</h6>
+                                                                        <ul class="mb-0">
+                                                                            <li><code>0 */6 * * *</code> - Every 6 hours</li>
+                                                                            <li><code>0 0 * * *</code> - Once a day (midnight)</li>
+                                                                            <li><code>0 0 * * 1-5</code> - Weekdays at midnight</li>
+                                                                            <li><code>0 */2 * * *</code> - Every 2 hours</li>
+                                                                        </ul>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="modal-footer">
+                                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                                    <button type="submit" class="btn btn-primary">Schedule</button>
+                                                                </div>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            <% } %>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <% }); %>
+                        </tbody>
+                    </table>
                 </div>
-                <div class="card-body">
-                    <form id="triggerForm">
-                        <div class="form-group">
-                            <label for="source">Select Source (Optional)</label>
-                            <select class="form-control" id="source">
-                                <option value="">All Sources</option>
-                                <!-- Options will be dynamically populated -->
-                            </select>
-                        </div>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-play"></i> Trigger Scraping
-                        </button>
-                    </form>
+            <% } else { %>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    No scrapers available. Check if the scraper API is running and properly configured.
                 </div>
-            </div>
+            <% } %>
         </div>
     </div>
 </div>
 
-<%- contentFor('scripts') %>
+<!-- Initialize DataTable for scrapers -->
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Populate source dropdown
-    async function populateSourceDropdown() {
-        try {
-            const response = await fetch('/api/v1/scraper/status');
-            const data = await response.json();
-            
-            const sourceSelect = document.getElementById('source');
-            // Clear existing options except "All Sources"
-            while (sourceSelect.options.length > 1) {
-                sourceSelect.options.remove(1);
-            }
-            
-            // Add enabled sources
-            if (data.enabled_sources && data.enabled_sources.length > 0) {
-                data.enabled_sources.forEach(source => {
-                    const option = document.createElement('option');
-                    option.value = source;
-                    option.textContent = source;
-                    sourceSelect.appendChild(option);
-                });
-            }
-        } catch (error) {
-            console.error('Error populating source dropdown:', error);
-        }
-    }
-    
-    // Call initially
-    populateSourceDropdown();
-    
-    // Function to update dashboard data
-    async function updateDashboard() {
-        try {
-            // Fetch status
-            const statusResponse = await fetch('/api/v1/scraper/status');
-            const statusData = await statusResponse.json();
-            
-            // Update status information
-            const nextRun = statusData.scheduler?.next_run || 'Not scheduled';
-            const lastRun = statusData.scheduler?.last_run || 'Never';
-            
-            document.getElementById('nextRun').textContent = nextRun === 'Not scheduled' ? nextRun : new Date(nextRun).toLocaleString();
-            document.getElementById('lastRun').textContent = lastRun === 'Never' ? lastRun : new Date(lastRun).toLocaleString();
-            
-            // Fetch stats
-            const statsResponse = await fetch('/api/v1/scraper/stats');
-            const statsData = await statsResponse.json();
-            
-            // Update total articles
-            document.getElementById('totalArticles').textContent = statsData.total_articles || 0;
-            
-            // Update source statistics
-            if (statsData.sources && Object.keys(statsData.sources).length > 0) {
-                const sourceStatsHtml = Object.entries(statsData.sources)
-                    .map(([source, data]) => `
-                        <tr>
-                            <td>${source}</td>
-                            <td>${data.articles_count || 0}</td>
-                            <td>${data.last_run ? new Date(data.last_run).toLocaleString() : 'Never'}</td>
-                        </tr>
-                    `).join('');
-                
-                document.getElementById('sourceStats').innerHTML = sourceStatsHtml;
-            } else {
-                document.getElementById('sourceStats').innerHTML = '<tr><td colspan="3" class="text-center">No data available</td></tr>';
-            }
-            
-        } catch (error) {
-            console.error('Error updating dashboard:', error);
-            document.getElementById('nextRun').textContent = 'Error';
-            document.getElementById('lastRun').textContent = 'Error';
-            document.getElementById('totalArticles').textContent = 'Error';
-            document.getElementById('sourceStats').innerHTML = '<tr><td colspan="3" class="text-center">Error loading data</td></tr>';
-        }
-    }
-    
-    // Update dashboard every 30 seconds
-    updateDashboard();
-    setInterval(updateDashboard, 30000);
-    
-    // Handle manual trigger form submission
-    document.getElementById('triggerForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const source = document.getElementById('source').value;
-        const button = this.querySelector('button[type="submit"]');
-        
-        try {
-            button.disabled = true;
-            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Triggering...';
-            
-            const response = await fetch(`/api/v1/scraper/trigger${source ? `?source=${source}` : ''}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof $.fn.DataTable !== 'undefined') {
+            $('#scrapersTable').DataTable({
+                order: [[5, 'desc']] // Sort by last run column by default
             });
-            
-            const data = await response.json();
-            
-            if (response.ok) {
-                alert('Scraping triggered successfully!');
-                updateDashboard();
-            } else {
-                throw new Error(data.error || 'Failed to trigger scraping');
-            }
-        } catch (error) {
-            alert('Error triggering scraping: ' + error.message);
-        } finally {
-            button.disabled = false;
-            button.innerHTML = '<i class="fas fa-play"></i> Trigger Scraping';
         }
     });
-});
 </script> 
