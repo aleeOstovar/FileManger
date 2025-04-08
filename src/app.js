@@ -33,6 +33,7 @@ const apiKeyRoutes = require('./routes/apiKeyRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const newsPostRoutes = require('./routes/newsPostRoutes');
 const scraperRoutes = require('./routes/scraperRoutes');
+const { router: authRoutes } = require('./routes/authRoutes');
 
 // Create Express app
 const app = express();
@@ -247,13 +248,15 @@ app.get('/api/health', (req, res) => {
 });
 
 // Protected API routes
-app.use('/api/v1/api-keys', apiKeyRoutes);
-app.use('/api/v1/files', fileRoutes);
-app.use('/api/v1/images', imageRoutes);
-app.use('/api/v1/documents', documentRoutes);
-app.use('/api/v1/videos', videoRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/files', protect, fileRoutes);
+app.use('/api/v1/images', protect, imageRoutes);
+app.use('/api/documents', protect, documentRoutes);
+app.use('/api/videos', protect, videoRoutes);
+app.use('/api/api-keys', protect, apiKeyRoutes);
+app.use('/api/dashboard', protect, dashboardRoutes);
 app.use('/api/v1/news-posts', newsPostRoutes);
-app.use('/api/v1/scraper', scraperRoutes);
+app.use('/api/scrapers', protect, scraperRoutes);
 
 // 404 handler
 app.use(notFound);
