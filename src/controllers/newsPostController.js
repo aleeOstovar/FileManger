@@ -3,6 +3,8 @@ const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
 const logger = require('../utils/logger');
 const { addFullUrl } = require('../utils/fileUtils');
+const { normalizeImagesFormat } = require('../utils/newsUtils');
+const NewsPost = require('../models/NewsPost');
 
 /**
  * @swagger
@@ -110,30 +112,25 @@ exports.createNewsPost = catchAsync(async (req, res, next) => {
     logger.info('postData is null or undefined');
   }
   
-  // Process the content field to ensure it's an array
+  // Ensure content is a valid object (Map in Mongoose terms)
   if (postData && postData.content) {
-    if (typeof postData.content === 'string') {
-      // Convert string to array with paragraphs split by newlines
-      postData.content = postData.content.split(/\n{2,}/);
-      logger.info('Converted content string to array by splitting paragraphs');
-    } else if (!Array.isArray(postData.content)) {
-      // If not array or string, try to convert to string then array
-      try {
-        const contentStr = String(postData.content);
-        postData.content = [contentStr];
-        logger.info('Converted non-string content to string array');
-      } catch (e) {
-        logger.error(`Failed to convert content: ${e.message}`);
-        postData.content = ['Content conversion error'];
-      }
-    }
+    if (typeof postData.content !== 'object' || Array.isArray(postData.content)) {
+      logger.error(`Invalid content type: expected object, got ${typeof postData.content}`);
+      return next(new AppError('Content must be an object', 400));
+    } 
+    // Optional: Add a check for emptiness if needed, depends on Mongoose validator
+    // if (Object.keys(postData.content).length === 0) {
+    //   logger.error('Content object is empty');
+    //   return next(new AppError('Content object cannot be empty', 400));
+    // }
+    logger.info('Content field is a valid object.');
   }
   
   // Handle imagesUrl if it's a string instead of an array
   if (postData && postData.imagesUrl) {
     logger.info(`imagesUrl type: ${typeof postData.imagesUrl}`);
     
-    // If it's a string, attempt to parse it
+    // If it's a string, attempt to parse it as JSON first
     if (typeof postData.imagesUrl === 'string') {
       try {
         const parsed = JSON.parse(postData.imagesUrl);
@@ -142,20 +139,33 @@ exports.createNewsPost = catchAsync(async (req, res, next) => {
       } catch (e) {
         logger.error(`JSON parsing failed: ${e.message}`);
         
-        // Try a different approach - sometimes Python sends JS literal notation
-        try {
-          // Convert to a valid JSON string first by replacing single quotes with double
-          const jsonStr = postData.imagesUrl
-            .replace(/'/g, '"')
-            .replace(/(\w+):/g, '"$1":');  // Convert JS property names to JSON format
-          
-          const parsed = JSON.parse(jsonStr);
-          postData.imagesUrl = parsed;
-          logger.info('Successfully parsed imagesUrl after string conversion');
-        } catch (err) {
-          logger.error(`All parsing attempts failed: ${err.message}`);
-          // Set to empty array to avoid validation errors
-          postData.imagesUrl = [];
+        // Try handling it as newline-separated URLs from form submission
+        if (postData.imagesUrl.includes('\n')) {
+          logger.info('Treating imagesUrl as newline-separated URLs from form');
+          const urls = postData.imagesUrl.split('\n').filter(url => url.trim());
+          postData.imagesUrl = urls.map((url, index) => ({
+            id: `img${index}`,
+            url: url.trim(),
+            caption: '',
+            type: 'figure'
+          }));
+          logger.info(`Converted ${urls.length} newline-separated URLs to image objects`);
+        } else {
+          // Try a different approach - sometimes Python sends JS literal notation
+          try {
+            // Convert to a valid JSON string first by replacing single quotes with double
+            const jsonStr = postData.imagesUrl
+              .replace(/'/g, '"')
+              .replace(/(\w+):/g, '"$1":');  // Convert JS property names to JSON format
+            
+            const parsed = JSON.parse(jsonStr);
+            postData.imagesUrl = parsed;
+            logger.info('Successfully parsed imagesUrl after string conversion');
+          } catch (err) {
+            logger.error(`All parsing attempts failed: ${err.message}`);
+            // Set to empty array to avoid validation errors
+            postData.imagesUrl = [];
+          }
         }
       }
     }
@@ -216,7 +226,9 @@ exports.createNewsPost = catchAsync(async (req, res, next) => {
     postData.content = postData.content.filter(paragraph => paragraph.trim() !== '');
   }
   
-  // Basic validation
+  // --- Final Validation --- 
+
+  // Basic validation for title
   if (!postData || !postData.title) {
     logger.error('Missing title in news post data');
     
@@ -250,15 +262,10 @@ exports.createNewsPost = catchAsync(async (req, res, next) => {
     }
   }
   
-  if (!postData.content || !Array.isArray(postData.content) || postData.content.length === 0) {
-    logger.error('Missing or invalid content in news post data');
-    // If content is a string, convert to array
-    if (typeof postData.content === 'string') {
-      postData.content = [postData.content];
-      logger.info('Converted content string to array');
-    } else {
-      return next(new AppError('Content must be a non-empty array of strings', 400));
-    }
+  // Validation for content (ensure it exists and is a non-empty object)
+  if (!postData.content || typeof postData.content !== 'object' || Array.isArray(postData.content) || Object.keys(postData.content).length === 0) {
+    logger.error('Missing or invalid content (must be non-empty object) in news post data');
+    return next(new AppError('Content must be a non-empty object', 400));
   }
   
   // Create the news post
@@ -432,7 +439,39 @@ exports.getNewsPost = catchAsync(async (req, res, next) => {
  *         description: News post not found
  */
 exports.updateNewsPost = catchAsync(async (req, res, next) => {
-  const newsPost = await newsPostService.updateNewsPost(req.params.id, req.body);
+  // Clone the request body for manipulation
+  const updateData = { ...req.body };
+  
+  // Process imagesUrl from form if it's a string (newline separated URLs)
+  if (updateData.imagesUrl && typeof updateData.imagesUrl === 'string') {
+    // Split by newlines and filter empty lines
+    const imgUrls = updateData.imagesUrl.split('\n').filter(url => url.trim());
+    
+    // Get existing newsPost to preserve metadata
+    const existingPost = await newsPostService.getNewsPostById(req.params.id);
+    const existingImages = existingPost.imagesUrl || [];
+    
+    // Map URLs to objects, preserving existing metadata when possible
+    updateData.imagesUrl = imgUrls.map((url, index) => {
+      const trimmedUrl = url.trim();
+      // Try to find existing image with same URL to preserve metadata
+      const existingImg = existingImages.find(img => img.url === trimmedUrl);
+      
+      if (existingImg) {
+        return existingImg;
+      } else {
+        // Create new image object if URL wasn't in the existing images
+        return {
+          id: `img${index}`,
+          url: trimmedUrl,
+          caption: '',
+          type: 'figure'
+        };
+      }
+    });
+  }
+  
+  const newsPost = await newsPostService.updateNewsPost(req.params.id, updateData);
   
   res.status(200).json({
     status: 'success',
@@ -529,6 +568,13 @@ exports.getNewsPosts = catchAsync(async (req, res) => {
   // Get news posts
   const newsPosts = await newsPostService.getAllNewsPosts(query);
   
+  // Normalize image format for display in each post
+  if (Array.isArray(newsPosts)) {
+    newsPosts.forEach(post => normalizeImagesFormat(post));
+  } else if (newsPosts.data && Array.isArray(newsPosts.data)) {
+    newsPosts.data.forEach(post => normalizeImagesFormat(post));
+  }
+  
   // Get total count for pagination
   let totalQuery = { status };
   if (search) {
@@ -581,6 +627,9 @@ exports.createNewsPostForm = catchAsync(async (req, res) => {
 exports.getNewsPostDetails = catchAsync(async (req, res) => {
   const newsPost = await newsPostService.getNewsPostById(req.params.id);
   
+  // Normalize image format for display
+  normalizeImagesFormat(newsPost);
+  
   res.render('dashboard/news-posts/details', {
     title: 'News Post Details',
     active: 'news-posts',
@@ -600,10 +649,15 @@ exports.getNewsPostDetails = catchAsync(async (req, res) => {
 exports.editNewsPostForm = catchAsync(async (req, res) => {
   const newsPost = await newsPostService.getNewsPostById(req.params.id);
   
+  // Normalize image format for display
+  normalizeImagesFormat(newsPost);
+  
   res.render('dashboard/news-posts/edit', {
     title: 'Edit News Post',
     active: 'news-posts',
     newsPost,
+    isEditing: true,
+    formAction: `/api/v1/news-posts/${newsPost._id}?_method=PATCH`,
     messages: {
       error: req.flash('error'),
       success: req.flash('success'),
@@ -661,5 +715,61 @@ exports.checkArticleExists = catchAsync(async (req, res, next) => {
   // Return the result
   res.status(200).json({
     exists
+  });
+});
+
+/**
+ * @swagger
+ * /api/v1/news-posts/count:
+ *   get:
+ *     summary: Get count of news posts
+ *     description: Get the count of news posts, optionally filtered by source
+ *     tags: [News Posts]
+ *     parameters:
+ *       - in: query
+ *         name: source
+ *         schema:
+ *           type: string
+ *         description: Filter by source name (e.g., 'mihan_blockchain', 'arzdigital')
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved count
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 count:
+ *                   type: integer
+ *                   example: 42
+ */
+exports.getNewsPostCount = catchAsync(async (req, res, next) => {
+  const { source } = req.query;
+  
+  // Create filter based on source parameter using regex on sourceUrl
+  const filter = {};
+  if (source) {
+    let urlPattern;
+    switch(source.toLowerCase()) {
+      case 'mihan_blockchain':
+      case 'mihanblockchain':
+        urlPattern = /mihanblockchain\.com/i;
+        break;
+      case 'arzdigital':
+        urlPattern = /arzdigital\.com/i;
+        break;
+      default:
+        urlPattern = new RegExp(source, 'i');
+    }
+    filter.sourceUrl = { $regex: urlPattern };
+  }
+  
+  // Get count from database
+  const count = await NewsPost.countDocuments(filter);
+  
+  logger.info(`News post count for source '${source || 'all'}': ${count}`);
+  
+  res.status(200).json({
+    count
   });
 }); 

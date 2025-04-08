@@ -104,51 +104,20 @@ router.post(
  */
 const newsPostController = require('../controllers/newsPostController');
 
-router.get('/news-posts', authController.protect, csrfProtection, dashboardController.getNewsPostsPage);
+router.get('/news-posts', csrfProtection, dashboardController.getNewsPostsPage);
 
 // Restricted to admin and manager roles for creation and editing
-router.get(
-  '/news-posts/create', 
-  authController.protect, 
-  authController.restrictTo('admin', 'manager'),
-  csrfProtection,
-  dashboardController.getCreateNewsPostPage
-);
+router.get('/news-posts/create', csrfProtection, dashboardController.getCreateNewsPostPage);
 
-router.post(
-  '/news-posts/create', 
-  authController.protect, 
-  authController.restrictTo('admin', 'manager'),
-  csrfProtection,
-  dashboardController.createNewsPost
-);
+router.post('/news-posts/create', csrfProtection, dashboardController.createNewsPost);
 
-router.get('/news-posts/:id', authController.protect, csrfProtection, dashboardController.getNewsPostPage);
+router.get('/news-posts/:id/preview', dashboardController.previewNewsPost);
 
-router.get(
-  '/news-posts/:id/edit', 
-  authController.protect, 
-  authController.restrictTo('admin', 'manager'),
-  csrfProtection,
-  dashboardController.getEditNewsPostPage
-);
+router.get('/news-posts/:id/edit', csrfProtection, dashboardController.getEditNewsPostPage);
 
-router.post(
-  '/news-posts/:id/edit', 
-  authController.protect, 
-  authController.restrictTo('admin', 'manager'),
-  csrfProtection,
-  dashboardController.updateNewsPost
-);
+router.post('/news-posts/:id/edit', csrfProtection, dashboardController.updateNewsPost);
 
-// Restricted to admin role for deletion
-router.post(
-  '/news-posts/:id/delete', 
-  authController.protect, 
-  authController.restrictTo('admin'),
-  csrfProtection,
-  dashboardController.deleteNewsPost
-);
+router.post('/news-posts/:id/delete', csrfProtection, dashboardController.deleteNewsPost);
 
 /**
  * User Management Routes - Admin only
@@ -174,27 +143,10 @@ router.get('/settings', authController.restrictTo('admin'), csrfProtection, (req
   });
 });
 
-// Scraper Dashboard and actions
+// Scraper specific routes
 router.get('/scraper', csrfProtection, scraperController.renderScraperDashboard);
-router.post('/scraper/:scraperId/run', authController.restrictTo('admin', 'manager'), csrfProtection, (req, res) => {
-  // Set scraperId in req.params
-  const { scraperId } = req.params;
-  req.params = { ...req.params, scraperId };
-  
-  // Call the runScraperWithProgress function
-  scraperController.runScraperWithProgress(req, res);
-});
-router.post('/scraper/:scraperId/stop', authController.restrictTo('admin', 'manager'), csrfProtection, (req, res) => {
-  // For now, just redirect back to the dashboard with a message
-  req.flash('info', 'Stop functionality is not yet implemented');
-  res.redirect('/dashboard/scraper');
-});
-router.get('/scraper/:scraperId/manual', authController.restrictTo('admin', 'manager'), csrfProtection, (req, res) => {
-  // For manual scraping we'll redirect to the run route for now
-  const { scraperId } = req.params;
-  req.flash('info', 'Manual scraping redirects to automatic scraping for now');
-  res.redirect(`/dashboard/scraper/${scraperId}/progress/manual-${Date.now()}`);
-});
+router.post('/scraper/:scraperId/run', csrfProtection, scraperController.runScraper);
+router.post('/scraper/:scraperId/stop', csrfProtection, scraperController.stopScraper);
 router.get('/scraper/:scraperId/progress/:jobId', csrfProtection, scraperController.getScrapingProgress);
 
 module.exports = router; 

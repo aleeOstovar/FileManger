@@ -13,6 +13,7 @@ const router = express.Router();
 
 // Public routes (no authentication required)
 router.get('/', newsPostController.getAllNewsPosts);
+router.get('/count', newsPostController.getNewsPostCount);
 router.get('/stats', newsPostController.getNewsPostStats);
 router.get('/:id', newsPostController.getNewsPost);
 

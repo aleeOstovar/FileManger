@@ -1,708 +1,367 @@
 <!-- Scraping Progress Page -->
 <div class="container-fluid px-4">
-    <h1 class="mt-4">Scraping Progress</h1>
+    <h1 class="mt-4">Scraping Progress: <%= scraper.name %></h1>
     <ol class="breadcrumb mb-4">
         <li class="breadcrumb-item"><a href="/dashboard">Dashboard</a></li>
         <li class="breadcrumb-item"><a href="/dashboard/scraper">News Scraper</a></li>
         <li class="breadcrumb-item active">Progress</li>
     </ol>
 
-    <div class="row mb-4">
-        <div class="col-xl-12">
+    <!-- Progress Summary Card -->
             <div class="card mb-4">
                 <div class="card-header">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <i class="fas fa-robot me-1"></i>
-                            Scraping Progress: <%= scraper.name %>
-                        </div>
-                        <div>
-                            <span class="badge bg-primary" id="jobIdBadge">Job ID: <%= jobId %></span>
-                        </div>
-                    </div>
+            <i class="fas fa-tasks me-1"></i>
+            Current Status
                 </div>
                 <div class="card-body">
-                    <!-- Progress Bar -->
-                    <div class="progress mb-4" style="height: 25px;">
-                        <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
-                             role="progressbar" style="width: <%= initialProgress.progress || 0 %>%;" 
-                             aria-valuenow="<%= initialProgress.progress || 0 %>" aria-valuemin="0" aria-valuemax="100">
+            <h4 id="statusTitle"><%= initialProgress.message || 'Initializing...' %></h4>
+            <div class="progress mb-3" style="height: 25px;">
+                <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" 
+                     style="width: <%= initialProgress.progress || 0 %>%;" 
+                     aria-valuenow="<%= initialProgress.progress || 0 %>" 
+                     aria-valuemin="0" aria-valuemax="100">
                             <span id="progressText"><%= initialProgress.progress || 0 %>%</span>
                         </div>
                     </div>
-
-                    <!-- Current Status -->
-                    <div class="alert alert-info mb-4">
-                        <div class="d-flex align-items-center">
-                            <div class="spinner-border text-primary me-3" role="status" id="statusSpinner">
-                                <span class="visually-hidden">Loading...</span>
-                            </div>
-                            <div>
-                                <h5 class="mb-1" id="statusTitle"><%= initialProgress.message || 'Initializing...' %></h5>
-                                <div id="statusMessage" class="text-muted">Please wait while the scraper is running...</div>
+            <p id="statusMessage" class="text-muted"><%= initialProgress.details && initialProgress.details.message ? initialProgress.details.message : 'Waiting for updates...' %></p>
+            
+            <!-- Action Buttons -->
+            <div id="actionButtons" class="mt-3">
+                <button id="stopBtn" class="btn btn-warning me-2" style="display: <%= initialProgress.status === 'running' ? 'inline-block' : 'none' %>;">
+                    <i class="fas fa-stop me-1"></i> Stop Scraping
+                </button>
+                <a href="/dashboard/scraper" id="backBtn" class="btn btn-secondary" style="display: <%= initialProgress.status !== 'running' ? 'inline-block' : 'none' %>;">
+                    <i class="fas fa-arrow-left me-1"></i> Back to Scrapers
+                </a>
+                 <a href="/dashboard/news-posts" id="viewArticlesBtn" class="btn btn-primary" style="display: <%= initialProgress.status === 'complete' ? 'inline-block' : 'none' %>;">
+                    <i class="fas fa-newspaper me-1"></i> View Scraped Articles
+                </a>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Process Steps Card -->
+    <!-- Detailed Steps/Logs Card -->
                     <div class="card mb-4">
                         <div class="card-header">
-                            <i class="fas fa-tasks me-1"></i>
-                            Scraping Process Steps
+            <i class="fas fa-stream me-1"></i>
+            Detailed Steps & Logs
                         </div>
                         <div class="card-body">
-                            <div class="list-group list-group-flush" id="processSteps">
-                                <div class="list-group-item" id="step1">
-                                    <div class="d-flex w-100 justify-content-between">
-                                        <h5 class="mb-1">1. Getting list of news articles</h5>
-                                        <span class="badge bg-secondary" id="step1Status">Pending</span>
-                                    </div>
-                                    <div id="step1Details" class="mt-3 d-none">
-                                        <div id="articlesList" class="mb-3">
-                                            <!-- Article list will be inserted here -->
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="list-group-item" id="step2">
-                                    <div class="d-flex w-100 justify-content-between">
-                                        <h5 class="mb-1">2. Scraping each news article</h5>
-                                        <span class="badge bg-secondary" id="step2Status">Pending</span>
-                                    </div>
-                                    <div id="step2Details" class="mt-3 d-none">
-                                        <div id="currentArticle" class="mb-3">
-                                            <!-- Current article details will be inserted here -->
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="list-group-item" id="step3">
-                                    <div class="d-flex w-100 justify-content-between">
-                                        <h5 class="mb-1">3. Processing HTML content</h5>
-                                        <span class="badge bg-secondary" id="step3Status">Pending</span>
-                                    </div>
-                                    <div id="step3Details" class="mt-3 d-none">
-                                        <!-- HTML processing details -->
-                                    </div>
-                                </div>
-                                <div class="list-group-item" id="step4">
-                                    <div class="d-flex w-100 justify-content-between">
-                                        <h5 class="mb-1">4. Saving processed article</h5>
-                                        <span class="badge bg-secondary" id="step4Status">Pending</span>
-                                    </div>
-                                    <div id="step4Details" class="mt-3 d-none">
-                                        <div id="processedItem" class="mb-3">
-                                            <div class="card">
-                                                <div class="card-body">
-                                                    <pre id="processedItemJson" class="bg-light p-3 rounded" style="max-height: 300px; overflow-y: auto;"></pre>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="list-group-item" id="step5">
-                                    <div class="d-flex w-100 justify-content-between">
-                                        <h5 class="mb-1">5. Scraping completed</h5>
-                                        <span class="badge bg-secondary" id="step5Status">Pending</span>
-                                    </div>
-                                    <div id="step5Details" class="mt-3 d-none">
-                                        <div id="scrapingSummary" class="mb-3">
-                                            <!-- Scraping summary will be inserted here -->
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+            <!-- Step Indicators (Simplified) -->
+            <div class="row mb-3 text-center">
+                <div class="col"><span id="stepInit" class="badge rounded-pill bg-secondary">Initialize</span></div>
+                <div class="col"><span id="stepGettingNewsList" class="badge rounded-pill bg-secondary">Get List</span></div>
+                <div class="col"><span id="stepScrapingArticles" class="badge rounded-pill bg-secondary">Scrape Articles</span></div>
+                <div class="col"><span id="stepProcessingHtml" class="badge rounded-pill bg-secondary">Process HTML</span></div>
+                <div class="col"><span id="stepSavingProcessedItems" class="badge rounded-pill bg-secondary">Save Data</span></div>
+                <div class="col"><span id="stepComplete" class="badge rounded-pill bg-secondary">Complete</span></div>
                     </div>
 
-                    <!-- Actions -->
-                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
-                        <a href="/dashboard/scraper" class="btn btn-secondary me-md-2">
-                            <i class="fas fa-arrow-left"></i> Back to Scrapers
-                        </a>
-                        <a href="/dashboard/news-posts" class="btn btn-primary" id="viewArticlesBtn" style="display: none;">
-                            <i class="fas fa-newspaper"></i> View Articles
-                        </a>
-                        <form action="/dashboard/scraper/<%= scraper.id %>/stop" method="POST" id="stopForm">
-                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                            <button type="submit" class="btn btn-danger" id="stopBtn">
-                                <i class="fas fa-stop"></i> Stop Scraper
-                            </button>
-                        </form>
+            <!-- Log Output / Detailed Messages -->
+            <div id="logOutput" class="bg-light p-3 rounded" style="max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 0.9em;">
+                <p>Waiting for progress updates...</p>
+                <!-- Logs will be appended here by JavaScript -->
                     </div>
-                </div>
+
+             <!-- Final Summary (Shown on Complete/Error) -->
+            <div id="finalSummary" class="mt-3" style="display: none;">
+                <!-- Summary details will be populated here -->
             </div>
         </div>
     </div>
 </div>
 
-<!-- JavaScript for real-time progress updates -->
+<!-- Hidden data for JavaScript -->
+<div id="scraper-progress-data" 
+     data-scraper-id="<%= scraper.id %>" 
+     data-job-id="<%= jobId %>" 
+     data-api-url="<%= scraperApiUrl %>"
+     data-initial-progress='<%= JSON.stringify(initialProgress) %>'>
+</div>
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const scraperId = '<%= scraper.id %>';
-        const jobId = '<%= jobId %>';
-        const apiBaseUrl = '<%= scraperApiUrl %>';
-        const useMockData = <%= useMockData || false %>; // Use mock data for demo scraper
-        
-        // Initial state
-        let isCompleted = false;
-        let pollInterval;
-        let mockStage = 0; // For demo mode
+    const progressDataElem = document.getElementById('scraper-progress-data');
+    const scraperId = progressDataElem.dataset.scraperId;
+    const jobId = progressDataElem.dataset.jobId;
+    const apiUrl = progressDataElem.dataset.apiUrl;
+    let initialProgress;
+    try {
+        initialProgress = JSON.parse(progressDataElem.dataset.initialProgress);
+    } catch (e) {
+        console.error("Error parsing initial progress data:", e);
+        initialProgress = { status: 'error', message: 'Error loading initial state', progress: 0, stage:'error', details: {} };
+    }
         
         // Elements
         const progressBar = document.getElementById('progressBar');
         const progressText = document.getElementById('progressText');
         const statusTitle = document.getElementById('statusTitle');
         const statusMessage = document.getElementById('statusMessage');
-        const statusSpinner = document.getElementById('statusSpinner');
+    const stopBtn = document.getElementById('stopBtn');
+    const backBtn = document.getElementById('backBtn');
         const viewArticlesBtn = document.getElementById('viewArticlesBtn');
-        const stopBtn = document.getElementById('stopBtn');
-        
-        // Step elements
-        const stepElements = {
-            'getting_news_list': {
-                container: document.getElementById('step1'),
-                status: document.getElementById('step1Status'),
-                details: document.getElementById('step1Details'),
-                articlesList: document.getElementById('articlesList')
-            },
-            'scraping_articles': {
-                container: document.getElementById('step2'),
-                status: document.getElementById('step2Status'),
-                details: document.getElementById('step2Details'),
-                currentArticle: document.getElementById('currentArticle')
-            },
-            'processing_html': {
-                container: document.getElementById('step3'),
-                status: document.getElementById('step3Status'),
-                details: document.getElementById('step3Details')
-            },
-            'saving_processed_items': {
-                container: document.getElementById('step4'),
-                status: document.getElementById('step4Status'),
-                details: document.getElementById('step4Details'),
-                processedItemJson: document.getElementById('processedItemJson')
-            },
-            'complete': {
-                container: document.getElementById('step5'),
-                status: document.getElementById('step5Status'),
-                details: document.getElementById('step5Details'),
-                summary: document.getElementById('scrapingSummary')
+    const logOutput = document.getElementById('logOutput');
+    const finalSummary = document.getElementById('finalSummary');
+    const stepElements = {
+        init: document.getElementById('stepInit'),
+        getting_news_list: document.getElementById('stepGettingNewsList'),
+        scraping_articles: document.getElementById('stepScrapingArticles'),
+        processing_html: document.getElementById('stepProcessingHtml'),
+        saving_processed_items: document.getElementById('stepSavingProcessedItems'),
+        complete: document.getElementById('stepComplete')
+    };
+
+    let pollInterval = null;
+    let isCompleted = false;
+    let currentStage = 'init';
+    let lastLogMessage = '';
+
+    // --- Function Definitions ---
+
+    function stopPolling() {
+        console.log("Attempting to stop polling. Interval ID:", pollInterval);
+        if (pollInterval) {
+            clearInterval(pollInterval);
+            pollInterval = null;
+            console.log("Polling stopped.");
+        } else {
+            console.log("Polling interval already null or not set.");
+        }
+    }
+
+    function updateUI(data) {
+        try {
+            if (!data || typeof data !== 'object') {
+                console.error("Invalid progress data received:", data);
+                data = { is_scraping: false, status: 'error', message: 'Invalid data received from server', progress: progressBar ? progressBar.getAttribute('aria-valuenow') : 0, stage:'error', details: { error: 'Invalid data format' } };
             }
-        };
-        
-        // Function to update the UI based on the progress data
-        function updateUI(data) {
-            // Update progress bar
-            const progress = data.progress || 0;
-            progressBar.style.width = `${progress}%`;
-            progressBar.setAttribute('aria-valuenow', progress);
-            progressText.textContent = `${progress}%`;
             
-            // Update status
-            statusTitle.textContent = data.message || 'Working...';
+            const progress = Math.max(0, Math.min(100, data.progress || 0));
+            const status = data.status || 'unknown';
+            const apiMessage = data.message || (status === 'running' ? 'Processing...' : 'Waiting...');
+            const stage = data.stage || getStageFromProgress(progress);
+            currentStage = stage;
+            const details = data.details || {};
+
+            if (progressBar && progressText) {
+                progressBar.style.width = `${progress}%`;
+                progressBar.setAttribute('aria-valuenow', progress);
+                progressText.textContent = `${progress}%`;
+                progressBar.classList.toggle('progress-bar-animated', status === 'running');
+                progressBar.classList.toggle('bg-success', status === 'complete');
+                progressBar.classList.toggle('bg-danger', status === 'error' || status === 'failed');
+                progressBar.classList.toggle('bg-warning', status === 'stopped');
+            } else {
+                console.warn("Progress bar elements not found");
+            }
+
+            if (statusTitle) statusTitle.textContent = getStatusTitle(status);
+            else console.warn("Status title element not found");
+            if (statusMessage) statusMessage.textContent = apiMessage;
+            else console.warn("Status message element not found");
+
+            const detailMessage = details.message || '';
+            const combinedMessage = detailMessage && detailMessage !== apiMessage ? `${apiMessage} - ${detailMessage}` : apiMessage;
+            appendLog(combinedMessage, status);
+            if(details.error) {
+                 appendLog(`Error Detail: ${details.error}`, 'error');
+            }
+
+            updateStepIndicators(currentStage, status);
+
+            if (stopBtn) stopBtn.style.display = status === 'running' ? 'inline-block' : 'none';
+            if (backBtn) backBtn.style.display = status !== 'running' ? 'inline-block' : 'none';
+            if (viewArticlesBtn) viewArticlesBtn.style.display = status === 'complete' ? 'inline-block' : 'none';
+
+            const finalStates = ['complete', 'error', 'failed', 'stopped'];
+            const isStillScraping = typeof data.is_scraping === 'boolean' ? data.is_scraping : (status === 'running'); 
             
-            // Update step status based on current stage
-            const currentStage = data.stage || 'init';
-            
-            // Process each step
-            processStep(currentStage, data);
-            
-            // Check if completed
-            if (data.status === 'completed') {
+            if (!isCompleted && (finalStates.includes(status) || !isStillScraping)) { 
+                const finalStatus = finalStates.includes(status) ? status : 'complete'; 
+                console.log(`Final state detected: ${finalStatus}, isCompleted currently ${isCompleted}`);
                 isCompleted = true;
-                stopPolling();
-                statusSpinner.style.display = 'none';
-                viewArticlesBtn.style.display = 'block';
-                stopBtn.style.display = 'none';
-                progressBar.classList.remove('progress-bar-animated');
-                progressBar.classList.add('bg-success');
-            }
-        }
-        
-        // Process individual step based on stage
-        function processStep(currentStage, data) {
-            switch(currentStage) {
-                case 'getting_news_list':
-                    updateStepStatus('getting_news_list', 'In Progress', 'primary');
-                    if (data.details && data.details.articles) {
-                        stepElements.getting_news_list.details.classList.remove('d-none');
-                        renderArticlesList(data.details.articles);
-                    }
-                    break;
-                    
-                case 'scraping_articles':
-                    updateStepStatus('getting_news_list', 'Completed', 'success');
-                    updateStepStatus('scraping_articles', 'In Progress', 'primary');
-                    if (data.details) {
-                        stepElements.scraping_articles.details.classList.remove('d-none');
-                        renderCurrentArticle(data.details);
-                    }
-                    break;
-                    
-                case 'processing_html':
-                    updateStepStatus('getting_news_list', 'Completed', 'success');
-                    updateStepStatus('scraping_articles', 'Completed', 'success');
-                    updateStepStatus('processing_html', 'In Progress', 'primary');
-                    stepElements.processing_html.details.classList.remove('d-none');
-                    stepElements.processing_html.details.innerHTML = 
-                        `<div class="alert alert-info">Processing HTML content for article: ${data.details?.currentUrl || 'current article'}</div>`;
-                    break;
-                    
-                case 'saving_processed_items':
-                    updateStepStatus('getting_news_list', 'Completed', 'success');
-                    updateStepStatus('scraping_articles', 'Completed', 'success');
-                    updateStepStatus('processing_html', 'Completed', 'success');
-                    updateStepStatus('saving_processed_items', 'In Progress', 'primary');
-                    
-                    if (data.details && data.details.processedItem) {
-                        stepElements.saving_processed_items.details.classList.remove('d-none');
-                        stepElements.saving_processed_items.processedItemJson.textContent = 
-                            JSON.stringify(data.details.processedItem, null, 2);
-                    }
-                    break;
-                    
-                case 'complete':
-                    updateStepStatus('getting_news_list', 'Completed', 'success');
-                    updateStepStatus('scraping_articles', 'Completed', 'success');
-                    updateStepStatus('processing_html', 'Completed', 'success');
-                    updateStepStatus('saving_processed_items', 'Completed', 'success');
-                    updateStepStatus('complete', 'Completed', 'success');
-                    
-                    if (data.details) {
-                        stepElements.complete.details.classList.remove('d-none');
-                        stepElements.complete.summary.innerHTML = `
-                            <div class="alert alert-success">
-                                <h5><i class="fas fa-check-circle me-2"></i> Scraping Completed Successfully</h5>
-                                <ul class="mb-0 mt-2">
-                                    <li>Total articles scraped: ${data.details.scraped || 0}</li>
-                                    <li>Articles saved to database: ${data.details.saved || 0}</li>
-                                    <li>Errors encountered: ${data.details.errors || 0}</li>
-                                    <li>Total time: ${data.details.duration || 'N/A'}</li>
-                                </ul>
-                            </div>
-                            
-                            <!-- Debug Information Panel -->
-                            <div class="card mt-3">
-                                <div class="card-header bg-info text-white">
-                                    <i class="fas fa-bug me-1"></i> Debugging Information
-                                </div>
-                                <div class="card-body">
-                                    <p class="mb-2">If you're not seeing articles in the database, check the following:</p>
-                                    <ol>
-                                        <li>Ensure the scraper API is properly connected to the database</li>
-                                        <li>Check API logs for any errors during article saving</li>
-                                        <li>Verify that the scraped data is in the correct format</li>
-                                    </ol>
-                                    
-                                    <div class="alert alert-light">
-                                        <p class="mb-1"><strong>Raw Progress Data:</strong></p>
-                                        <pre class="mb-0 mt-2" style="max-height: 200px; overflow-y: auto;">${JSON.stringify(data, null, 2)}</pre>
-                                    </div>
-                                    
-                                    <p class="mt-3 mb-0 text-muted">You can find detailed logs in the scraper API terminal output.</p>
-                                </div>
-                            </div>
-                        `;
-                    }
-                    break;
+                stopPolling(); 
                 
-                default:
-                    // Do nothing for initialization stage
-                    break;
+                progressBar?.classList.remove('progress-bar-animated');
+                
+                if (finalStatus === 'complete' && progressBar) {
+                    progressBar.style.width = `100%`;
+                    progressBar.setAttribute('aria-valuenow', 100);
+                    if(progressText) progressText.textContent = `100%`;
+                    progressBar.classList.add('bg-success');
+                    progressBar.classList.remove('bg-primary', 'bg-danger', 'bg-warning');
+                }
+                showFinalSummary(details, finalStatus);
+                updateStepIndicators('complete', finalStatus);
+            } else if (isStillScraping) {
+                 if(finalSummary) finalSummary.style.display = 'none';
             }
+        } catch (uiError) {
+            console.error("Error inside updateUI:", uiError);
+            appendLog(`Frontend UI Error: ${uiError.message}`, 'error');
+            if (!isCompleted) {
+                 isCompleted = true; 
+                 stopPolling();
+             }
         }
-        
-        // Update step status
-        function updateStepStatus(stepId, statusText, statusClass) {
-            const step = stepElements[stepId];
-            if (step) {
-                step.status.textContent = statusText;
-                step.status.className = `badge bg-${statusClass}`;
-            }
+    }
+
+    function getStatusTitle(status) {
+        switch (status) {
+            case 'running': return 'Scraping in Progress';
+            case 'complete': return 'Scraping Complete';
+            case 'error':
+            case 'failed': return 'Scraping Failed';
+            case 'stopped': return 'Scraping Stopped';
+            case 'pending': return 'Scraping Pending';
+            default: return 'Processing...';
         }
+    }
+
+    function appendLog(message, level = 'info') {
+        if (!logOutput || message === lastLogMessage) return; 
         
-        // Render articles list
-        function renderArticlesList(articles) {
-            if (!articles || !articles.length) {
-                stepElements.getting_news_list.articlesList.innerHTML = 
-                    '<div class="alert alert-warning">No articles found</div>';
-                return;
+        lastLogMessage = message; 
+        const p = document.createElement('p');
+        const timestamp = new Date().toLocaleTimeString();
+        p.innerHTML = `<code>[${timestamp}]</code> ${message}`;
+        if (level === 'error' || level === 'failed') p.classList.add('text-danger');
+        else if (level === 'warning' || level === 'stopped') p.classList.add('text-warning');
+        else p.classList.add('text-muted');
+        
+        logOutput.insertBefore(p, logOutput.firstChild);
+        
+        const maxLogs = 100;
+        while (logOutput.childElementCount > maxLogs) {
+            logOutput.removeChild(logOutput.lastChild);
+        }
+    }
+
+    function updateStepIndicators(currentStage, status) {
+        const stagesOrder = ['init', 'getting_news_list', 'scraping_articles', 'processing_html', 'saving_processed_items', 'complete'];
+        const currentIndex = stagesOrder.indexOf(currentStage);
+
+        stagesOrder.forEach((stage, index) => {
+            const element = stepElements[stage];
+            if (element) {
+                element.classList.remove('bg-primary', 'bg-success', 'bg-danger', 'bg-secondary', 'bg-warning');
+                if (index < currentIndex) {
+                    element.classList.add('bg-success');
+                } else if (index === currentIndex) {
+                    if (status === 'running') element.classList.add('bg-primary'); 
+                    else if (status === 'complete') element.classList.add('bg-success');
+                    else if (status === 'error' || status === 'failed') element.classList.add('bg-danger');
+                    else if (status === 'stopped') element.classList.add('bg-warning'); 
+                     else element.classList.add('bg-secondary');
+                } else {
+                    element.classList.add('bg-secondary');
+                }
             }
-            
-            let html = '<div class="card"><div class="card-body"><h6>Found Articles:</h6><ul class="list-group">';
-            
-            articles.forEach((article, index) => {
-                html += `
-                    <li class="list-group-item">
-                        <strong>${index + 1}.</strong> ${article.title || 'Untitled'}
-                        <br><small class="text-muted">${article.url || ''}</small>
-                    </li>
-                `;
+        });
+
+        if (stepElements.complete) {
+             if (status === 'complete') stepElements.complete.className = 'badge rounded-pill bg-success';
+             else if (status === 'error' || status === 'failed') stepElements.complete.className = 'badge rounded-pill bg-danger';
+             else if (status === 'stopped') stepElements.complete.className = 'badge rounded-pill bg-warning';
+             else if (currentIndex < stagesOrder.indexOf('complete')) stepElements.complete.className = 'badge rounded-pill bg-secondary';
+        }
+    }
+
+    function showFinalSummary(details, status) {
+        if (!finalSummary || !details) return;
+        let summaryHtml = '';
+        if (status === 'complete') {
+            summaryHtml = `
+                <div class="alert alert-success">
+                    <h5><i class="fas fa-check-circle me-2"></i> Scraping Completed Successfully</h5>
+                    <ul class="list-unstyled mb-0 mt-2">
+                        <li><strong>Total articles found:</strong> ${details.scraped || details.articles_found || 'N/A'}</li>
+                        <li><strong>Articles saved to database:</strong> ${details.saved || details.articles_processed || 'N/A'}</li>
+                        <li><strong>Errors encountered:</strong> ${details.errors || 0}</li>
+                        <li><strong>Total duration:</strong> ${details.duration || 'N/A'}</li>
+                    </ul>
+                </div>`;
+        } else if (status === 'error' || status === 'failed') {
+            summaryHtml = `
+                <div class="alert alert-danger">
+                    <h5><i class="fas fa-exclamation-triangle me-2"></i> Scraping Failed</h5>
+                    <p>An error occurred during the scraping process.</p>
+                    ${details.error ? `<p><strong>Error:</strong> ${details.error}</p>` : ''}
+                </div>`;
+        } else if (status === 'stopped') {
+             summaryHtml = `
+                <div class="alert alert-warning">
+                    <h5><i class="fas fa-stop-circle me-2"></i> Scraping Stopped</h5>
+                    <p>The scraping process was stopped by the user.</p>
+                </div>`;
+        }
+        if(finalSummary) {
+             finalSummary.innerHTML = summaryHtml;
+             finalSummary.style.display = 'block';
+        }
+    }
+
+    function stopScraping() {
+        if (!confirm('Are you sure you want to stop this scraping job?')) return;
+        
+        const url = `${apiUrl}/api/v1/monitoring/stop?source=${scraperId}`;
+        fetch(url, { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                appendLog('Stop request sent.', 'warning');
+                updateUI({ is_scraping: false, status: 'stopped', message: 'Scraping stopped by user.', progress: progressBar ? progressBar.getAttribute('aria-valuenow') : 0, stage: currentStage, details: {} });
+                if (!isCompleted) { isCompleted = true; stopPolling(); }
+            })
+            .catch(error => {
+                console.error('Error stopping scraping:', error);
+                appendLog(`Failed to stop scraping: ${error.message}`, 'error');
             });
-            
-            html += '</ul></div></div>';
-            stepElements.getting_news_list.articlesList.innerHTML = html;
-        }
-        
-        // Render current article
-        function renderCurrentArticle(details) {
-            const { current, total, currentUrl, currentTitle } = details;
-            
-            stepElements.scraping_articles.currentArticle.innerHTML = `
-                <div class="card">
-                    <div class="card-body">
-                        <h6>Scraping article ${current || '?'} of ${total || '?'}</h6>
-                        <div class="progress mt-2 mb-2" style="height: 10px;">
-                            <div class="progress-bar" role="progressbar" 
-                                style="width: ${(current/total)*100}%;" 
-                                aria-valuenow="${current}" aria-valuemin="0" aria-valuemax="${total}">
-                            </div>
-                        </div>
-                        <div class="d-flex align-items-center mt-3">
-                            <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
-                                <span class="visually-hidden">Loading...</span>
-                            </div>
-                            <strong class="me-2">Current article:</strong> 
-                            <a href="${currentUrl}" target="_blank" class="text-truncate">${currentTitle || currentUrl || 'Loading...'}</a>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-        
-        // Poll for progress updates
-        function pollProgress() {
-            // Don't continue polling if completed
-            if (isCompleted) return;
-            
-            // Construct URL
-            let url;
-            if (useMockData) {
-                // For demo scraper, always use mock endpoint with incrementing stage
-                mockStage = Math.min(mockStage + 1, 5); // Increment stage but max at 5
-                
-                // For demo, we'll simulate the API call and return mock data directly
-                const mockData = getMockData(mockStage);
-                updateUI(mockData);
-                
-                // If we reached the final stage, mark as completed
-                if (mockStage === 5) {
-                    setTimeout(() => {
-                        isCompleted = true;
-                        stopPolling();
-                    }, 1000);
-                }
-                
-                return; // Skip the actual fetch
-            } else {
-                // Use real monitoring endpoint instead of scraper-specific endpoint
-                url = `${apiBaseUrl}/api/v1/monitoring/progress`;
-            }
-            
-            // Fetch progress
-            fetch(url)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! Status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(response => {
-                    // Format the response data
-                    const data = response.data || response;
-                    console.log("Progress data:", data); // Log the raw data for debugging
-                    
-                    // Extract source-specific progress if available
-                    const sourceProgress = data.sources && data.sources[scraperId];
-                    
-                    // Format the progress data
-                    const progressData = {
-                        status: sourceProgress ? sourceProgress.status : data.status || 'pending',
-                        stage: getStageFromProgress(data, scraperId),
-                        message: sourceProgress ? `Scraping ${scraperId}` : data.status || 'Initializing...',
-                        progress: sourceProgress ? sourceProgress.progress : data.total_progress || 0,
-                        details: getDetailsFromProgress(data, scraperId, sourceProgress)
-                    };
-                    
-                    // Save article data if present
-                    if (sourceProgress && sourceProgress.articles) {
-                        progressData.details.articles = sourceProgress.articles.map(article => ({
-                            title: article.title || 'Untitled Article',
-                            url: article.url || '#'
-                        }));
-                    }
-                    
-                    // If we're in a later stage and have real articles, keep them visible
-                    if (!progressData.details.articles && window.savedArticles) {
-                        progressData.details.articles = window.savedArticles;
-                    }
-                    
-                    // Store article data for future reference
-                    if (progressData.details.articles && progressData.details.articles.length > 0) {
-                        window.savedArticles = progressData.details.articles;
-                    }
-                    
-                    updateUI(progressData);
-                })
-                .catch(error => {
-                    console.error('Error fetching progress:', error);
-                    statusMessage.textContent = `Error: ${error.message}`;
-                });
-        }
-        
-        // Helper function to determine stage from progress
-        function getStageFromProgress(progressData, scraperId) {
-            // If a specific scraper is provided, extract its progress
-            let progress = 0;
-            
-            if (scraperId && progressData.sources && progressData.sources[scraperId]) {
-                progress = progressData.sources[scraperId].progress || 0;
-            } else if (typeof progressData.progress === 'number') {
-                progress = progressData.progress;
-            } else if (typeof progressData.total_progress === 'number') {
-                progress = progressData.total_progress;
-            }
-            
-            // Determine stage based on progress percentage
-            if (progress < 10) {
-                return 'init';
-            } else if (progress < 30) {
-                return 'getting_news_list';
-            } else if (progress < 60) {
-                return 'scraping_articles';
-            } else if (progress < 90) {
-                return 'processing_html';
-            } else if (progress < 100) {
-                return 'saving_processed_items';
-            } else {
-                return 'complete';
-            }
-        }
-        
-        // Helper function to get details based on stage
-        function getDetailsFromProgress(progressData, scraperId, sourceProgress) {
-            // Determine stage based on progress
-            const stage = getStageFromProgress(progressData, scraperId);
-            
-            // Default details are empty
-            const details = {};
-            
-            // Populate details based on stage
-            switch (stage) {
-                case 'getting_news_list':
-                    // Use actual articles if available, otherwise simulate
-                    if (sourceProgress && sourceProgress.articles) {
-                        details.articles = sourceProgress.articles.map(article => ({
-                            title: article.title || 'Untitled Article',
-                            url: article.url || '#'
-                        }));
-                    } else if (window.savedArticles) {
-                        // Use previously saved articles if available
-                        details.articles = window.savedArticles;
-                    } else {
-                        // Fallback to simulated articles
-                        details.articles = [
-                            { title: 'Sample Article 1', url: getWebsiteUrl(scraperId) + '/article1' },
-                            { title: 'Sample Article 2', url: getWebsiteUrl(scraperId) + '/article2' },
-                            { title: 'Sample Article 3', url: getWebsiteUrl(scraperId) + '/article3' }
-                        ];
-                    }
-                    break;
-                    
-                case 'scraping_articles':
-                    // Use actual data if available
-                    details.current = sourceProgress ? sourceProgress.current_article_index || 1 : 1;
-                    details.total = sourceProgress ? (sourceProgress.articles_found || 3) : 3;
-                    
-                    // Use actual current article URL if available
-                    if (sourceProgress && sourceProgress.current_article) {
-                        details.currentUrl = sourceProgress.current_article.url || '#';
-                        details.currentTitle = sourceProgress.current_article.title || 'Current Article';
-                    } else if (window.savedArticles && details.current <= window.savedArticles.length) {
-                        details.currentUrl = window.savedArticles[details.current - 1].url;
-                        details.currentTitle = window.savedArticles[details.current - 1].title;
-                    } else {
-                        details.currentUrl = getWebsiteUrl(scraperId) + '/news/' + details.current;
-                        details.currentTitle = 'Article ' + details.current;
-                    }
-                    break;
-                    
-                case 'processing_html':
-                    // Use actual data if available
-                    details.current = sourceProgress ? sourceProgress.processed_article_index || 2 : 2;
-                    details.total = sourceProgress ? (sourceProgress.articles_found || 3) : 3;
-                    
-                    // Use actual current article URL if available
-                    if (sourceProgress && sourceProgress.current_processed_article) {
-                        details.currentUrl = sourceProgress.current_processed_article.url || '#';
-                        details.currentTitle = sourceProgress.current_processed_article.title || 'Current Article';
-                    } else if (window.savedArticles && details.current <= window.savedArticles.length) {
-                        details.currentUrl = window.savedArticles[details.current - 1].url;
-                        details.currentTitle = window.savedArticles[details.current - 1].title;
-                    } else {
-                        details.currentUrl = getWebsiteUrl(scraperId) + '/news/' + details.current;
-                        details.currentTitle = 'Article ' + details.current;
-                    }
-                    break;
-                    
-                case 'saving_processed_items':
-                    // Use actual processed item if available
-                    if (sourceProgress && sourceProgress.last_processed_article) {
-                        details.processedItem = sourceProgress.last_processed_article;
-                    } else {
-                        // Fallback to sample data
-                        details.processedItem = {
-                            title: window.savedArticles && window.savedArticles[0] ? window.savedArticles[0].title : 'Sample Article',
-                            sourceUrl: window.savedArticles && window.savedArticles[0] ? window.savedArticles[0].url : getWebsiteUrl(scraperId) + '/sample-article',
-                            sourceDate: new Date().toISOString(),
-                            creator: 'Author Name',
-                            thumbnailImage: 'https://via.placeholder.com/150',
-                            content: 'This is a sample article content...',
-                            imagesUrl: ['https://via.placeholder.com/300', 'https://via.placeholder.com/300'],
-                            tags: ['sample', 'news', 'test']
-                        };
-                    }
-                    break;
-                    
-                case 'complete':
-                    // Provide actual completion summary
-                    details.scraped = sourceProgress ? (sourceProgress.articles_found || 3) : (window.savedArticles ? window.savedArticles.length : 3);
-                    details.saved = sourceProgress ? (sourceProgress.articles_processed || details.scraped) : details.scraped;
-                    details.errors = sourceProgress ? (sourceProgress.errors || 0) : 0;
-                    
-                    // Calculate duration if available
-                    if (sourceProgress && sourceProgress.start_time && sourceProgress.end_time) {
-                        const start = new Date(sourceProgress.start_time);
-                        const end = new Date(sourceProgress.end_time);
-                        const durationMs = end - start;
-                        const durationSec = Math.floor(durationMs / 1000);
-                        const minutes = Math.floor(durationSec / 60);
-                        const seconds = durationSec % 60;
-                        details.duration = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-                    } else {
-                        details.duration = '00:30';
-                    }
-                    break;
-            }
-            
-            return details;
-        }
-        
-        // Get website URL based on scraper id
-        function getWebsiteUrl(sourceId) {
-            // Map of known scraper IDs to their actual website URLs
-            const websiteMap = {
-                'mihan_blockchain': 'https://mihanblockchain.com',
-                'coindesk': 'https://www.coindesk.com',
-                'cointelegraph': 'https://cointelegraph.com',
-                'bitcoin_com': 'https://bitcoin.com',
-                'crypto_news': 'https://cryptonews.com',
-                'demo': 'https://example.com'
-            };
-            
-            // Return mapped URL or a generic one if not found
-            return websiteMap[sourceId] || `https://${sourceId.replace(/_/g, '')}.com`;
-        }
-        
-        // Get mock data for demo scraper
-        function getMockData(stage) {
-            // Simple mock data to simulate different stages of the scraping process
-            const mockStages = [
-                {
-                    status: 'running',
-                    stage: 'init',
-                    message: 'Initializing scraper',
-                    progress: 5,
-                    details: { scraperId, jobId }
-                },
-                {
-                    status: 'running',
-                    stage: 'getting_news_list',
-                    message: 'Getting list of news articles',
-                    progress: 20,
-                    details: {
-                        articles: [
-                            { title: 'Breaking News: Major Development', url: 'https://example.com/news/1' },
-                            { title: 'Economy Shows Signs of Recovery', url: 'https://example.com/news/2' },
-                            { title: 'New Technology Breakthrough Announced', url: 'https://example.com/news/3' }
-                        ]
-                    }
-                },
-                {
-                    status: 'running',
-                    stage: 'scraping_articles',
-                    message: 'Scraping individual articles',
-                    progress: 40,
-                    details: {
-                        current: 1,
-                        total: 3,
-                        currentUrl: 'https://example.com/news/1'
-                    }
-                },
-                {
-                    status: 'running',
-                    stage: 'processing_html',
-                    message: 'Processing HTML content',
-                    progress: 60,
-                    details: {
-                        current: 2,
-                        total: 3,
-                        currentUrl: 'https://example.com/news/2'
-                    }
-                },
-                {
-                    status: 'running',
-                    stage: 'saving_processed_items',
-                    message: 'Saving processed article',
-                    progress: 80,
-                    details: {
-                        processedItem: {
-                            'title': 'New Technology Breakthrough Announced',
-                            'sourceUrl': 'https://example.com/news/3',
-                            'sourceDate': '2023-06-15T14:30:00Z',
-                            'creator': 'John Doe',
-                            'thumbnailImage': 'https://example.com/images/tech.jpg',
-                            'content': 'A major technology breakthrough was announced today...',
-                            'imagesUrl': ['https://example.com/images/tech.jpg', 'https://example.com/images/tech2.jpg'],
-                            'tags': ['technology', 'innovation', 'science']
-                        }
-                    }
-                },
-                {
-                    status: 'completed',
-                    stage: 'complete',
-                    message: 'Scraping process completed',
-                    progress: 100,
-                    details: {
-                        scraped: 3,
-                        saved: 3,
-                        errors: 0,
-                        duration: '00:01:45'
-                    }
-                }
-            ];
-            
-            // Return the appropriate stage
-            return mockStages[stage];
-        }
-        
-        // Start polling
-        function startPolling() {
-            // Poll immediately, then set interval
-            pollProgress();
-            pollInterval = setInterval(pollProgress, 3000); // Poll every 3 seconds
-        }
-        
-        // Stop polling
-        function stopPolling() {
-            if (pollInterval) {
-                clearInterval(pollInterval);
-            }
-        }
-        
-        // Initialize
-        startPolling();
-        
-        // Clean up on page unload
-        window.addEventListener('beforeunload', stopPolling);
+    }
+    
+    function mapApiStageToUiStage(apiStage) {
+        const stageMap = {
+            'fetching_list': 'getting_news_list', 
+        };
+        return stageMap[apiStage] || apiStage;
+    }
+
+    function getStageFromProgress(progress) {
+        progress = progress || 0;
+        if (progress < 10) return 'init';
+        if (progress < 30) return 'getting_news_list';
+        if (progress < 60) return 'scraping_articles';
+        if (progress < 90) return 'processing_html';
+        if (progress < 100) return 'saving_processed_items';
+        return 'complete';
+    }
+
+    // --- Initialization ---
+    try {
+        if(logOutput) logOutput.innerHTML = '';
+        appendLog('Initializing progress tracking...');
+        updateUI(initialProgress); 
+        isCompleted = initialProgress.status === 'complete' || initialProgress.status === 'error' || initialProgress.status === 'failed';
+    } catch (initError) {
+        console.error("Error during initial UI update:", initError);
+        appendLog(`Frontend Error on Init: ${initError.message}`, 'error');
+        isCompleted = true;
+    }
+    
+    if (!isCompleted) {
+        pollInterval = setInterval(pollProgress, 3000);
+    } else {
+        console.log("Initial state is completed, not starting polling.");
+    }
+
+    // Event listeners
+    if (stopBtn) {
+        stopBtn.addEventListener('click', stopScraping);
+    }
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+        stopPolling(); 
+    });
     });
 </script> 

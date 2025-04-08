@@ -24,8 +24,21 @@
           
           <div class="mb-3">
             <label for="content" class="form-label required">Content</label>
-            <textarea class="form-control rich-editor" id="content" name="content" rows="15" required><%= newsPost?.content || '' %></textarea>
-            <small class="text-muted">You can use HTML formatting in the content.</small>
+            <textarea class="form-control" id="content" name="content" rows="15" dir="rtl" style="text-align: right;" required><% 
+              if (newsPost && newsPost.content) {
+                if (typeof newsPost.content === 'object') {
+                  const contentValues = [];
+                  // Use Object.entries to preserve order
+                  Object.entries(newsPost.content).forEach(([key, value]) => {
+                    contentValues.push(value);
+                  });
+                  %><%= contentValues.join('\n\n') %><%
+                } else {
+                  %><%= newsPost.content %><%
+                }
+              } 
+            %></textarea>
+            <small class="text-muted">Edit content directly. Separate paragraphs with blank lines.</small>
           </div>
         </div>
         
@@ -61,30 +74,43 @@
           </div>
           
           <div class="mb-3">
-            <label for="imageThumbnail" class="form-label">Thumbnail Image URL</label>
-            <input type="url" class="form-control" id="imageThumbnail" name="imageThumbnail" value="<%= newsPost?.imageThumbnail || '' %>">
-            <% if (newsPost?.imageThumbnail) { %>
+            <label for="thumbnailImage" class="form-label">Thumbnail Image URL</label>
+            <input type="url" class="form-control" id="thumbnailImage" name="thumbnailImage" value="<%= newsPost?.thumbnailImage || '' %>">
+            <% if (newsPost?.thumbnailImage) { %>
               <div class="mt-2">
-                <img src="<%= newsPost.imageThumbnail %>" alt="Thumbnail preview" class="img-fluid rounded" style="max-height: 150px;">
+                <img src="<%= newsPost.thumbnailImage %>" alt="Thumbnail preview" class="img-fluid rounded" style="max-height: 150px;">
               </div>
             <% } %>
           </div>
           
           <div class="mb-3">
-            <label for="imagesUrl" class="form-label">Additional Image URLs</label>
-            <textarea class="form-control" id="imagesUrl" name="imagesUrl" rows="3"><%= newsPost?.imagesUrl ? newsPost.imagesUrl.join('\n') : '' %></textarea>
-            <small class="text-muted">One URL per line</small>
+            <label for="imagesUrl" class="form-label">Additional Images</label>
+            <textarea class="form-control" id="imagesUrl" name="imagesUrl" rows="3"><%= newsPost?.imagesUrl ? (Array.isArray(newsPost.imagesUrl) ? (typeof newsPost.imagesUrl[0] === 'string' ? newsPost.imagesUrl.join('\n') : newsPost.imagesUrl.map(img => img.url).join('\n')) : newsPost.imagesUrl) : '' %></textarea>
+            <small class="text-muted">One image URL per line. Image metadata (ID, caption) will be preserved during edits.</small>
             
             <% if (newsPost?.imagesUrl && newsPost.imagesUrl.length > 0) { %>
               <div class="mt-2 row">
-                <% newsPost.imagesUrl.slice(0, 4).forEach(imageUrl => { %>
+                <% 
+                  const imagesForPreview = Array.isArray(newsPost.imagesUrl) 
+                    ? (typeof newsPost.imagesUrl[0] === 'string' 
+                      ? newsPost.imagesUrl.map((url, i) => ({ url, id: `img${i}`, caption: '' })) 
+                      : newsPost.imagesUrl) 
+                    : [];
+                  
+                  imagesForPreview.slice(0, 4).forEach(img => { 
+                    const imgUrl = typeof img === 'string' ? img : img.url;
+                    const imgCaption = typeof img === 'string' ? '' : (img.caption || '');
+                %>
                   <div class="col-6 mb-2">
-                    <img src="<%= imageUrl %>" alt="Image preview" class="img-fluid rounded" style="max-height: 100px;">
+                    <img src="<%= imgUrl %>" alt="<%= imgCaption || 'Image preview' %>" class="img-fluid rounded" style="max-height: 100px;">
+                    <% if (imgCaption) { %>
+                      <div class="small text-muted text-truncate"><%= imgCaption %></div>
+                    <% } %>
                   </div>
                 <% }) %>
-                <% if (newsPost.imagesUrl.length > 4) { %>
+                <% if (imagesForPreview.length > 4) { %>
                   <div class="col-12">
-                    <small class="text-muted">And <%= newsPost.imagesUrl.length - 4 %> more images</small>
+                    <small class="text-muted">And <%= imagesForPreview.length - 4 %> more images</small>
                   </div>
                 <% } %>
               </div>
@@ -94,7 +120,7 @@
       </div>
       
       <div class="d-flex justify-content-between">
-        <a href="<%= isEditing ? `/dashboard/news-posts/${newsPost._id}` : '/dashboard/news-posts' %>" class="btn btn-secondary">
+        <a href="<%= isEditing ? `/dashboard/news-posts/${newsPost._id}/preview` : '/dashboard/news-posts' %>" class="btn btn-secondary">
           <i class="bi bi-arrow-left"></i> Cancel
         </a>
         <button type="submit" class="btn btn-primary">

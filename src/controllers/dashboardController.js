@@ -7,6 +7,7 @@ const File = require('../models/File');
 const NewsPost = require('../models/NewsPost');
 const newsPostService = require('../services/newsPostService');
 const apiKeyService = require('../services/apiKeyService');
+const { normalizeImagesFormat } = require('../utils/newsUtils'); // Import from utils
 
 /**
  * Dashboard home controller
@@ -389,24 +390,46 @@ exports.getCreateNewsPostPage = catchAsync(async (req, res) => {
 exports.createNewsPost = catchAsync(async (req, res) => {
   const {
     title, content, status, creator, sourceUrl, 
-    imageThumbnail, imagesUrl, tags, sourceDate
+    thumbnailImage, imagesUrl, tags, sourceDate
   } = req.body;
   
   // Process the tags from comma-separated string to array
   const tagsArray = tags ? tags.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
   
-  // Process imagesUrl from newline-separated string to array
-  const imagesUrlArray = imagesUrl ? 
-    imagesUrl.split('\n').map(url => url.trim()).filter(url => url) : 
-    [];
+  // Process imagesUrl from newline-separated string to array of objects
+  let imagesUrlArray = [];
+  if (imagesUrl) {
+    // Get the URLs by splitting newlines
+    const urls = imagesUrl.split('\n').map(url => url.trim()).filter(url => url);
+    
+    // Convert each URL into the proper object format with id
+    imagesUrlArray = urls.map((url, index) => {
+      return {
+        id: `img${index}`,
+        url: url,
+        caption: '',
+        type: 'figure'
+      };
+    });
+  }
+  
+  // Process content string to Map for MongoDB
+  let contentMap = new Map();
+  if (content && typeof content === 'string') {
+    // Split content by double newlines to get paragraphs
+    const paragraphs = content.split('\n\n').filter(p => p.trim());
+    paragraphs.forEach((p, index) => {
+      contentMap.set(`p${index}`, p.trim());
+    });
+  }
   
   const newsPostData = {
     title,
-    content,
+    content: contentMap,
     status: status || 'draft',
     creator,
     sourceUrl,
-    imageThumbnail,
+    thumbnailImage,
     imagesUrl: imagesUrlArray,
     tags: tagsArray,
     sourceDate: sourceDate || null
@@ -415,12 +438,13 @@ exports.createNewsPost = catchAsync(async (req, res) => {
   const newsPost = await newsPostService.createNewsPost(newsPostData);
   
   req.flash('success', 'News post created successfully');
-  res.redirect(`/dashboard/news-posts/${newsPost._id}`);
+  res.redirect(`/dashboard/news-posts/${newsPost._id}/preview`);
 });
 
 /**
  * Render a single News Post details page
  */
+/* // Removing this function as preview replaces it
 exports.getNewsPostPage = catchAsync(async (req, res) => {
   const { id } = req.params;
   
@@ -443,6 +467,7 @@ exports.getNewsPostPage = catchAsync(async (req, res) => {
     }
   });
 });
+*/
 
 /**
  * Render the form to edit a News Post
@@ -478,24 +503,82 @@ exports.getEditNewsPostPage = catchAsync(async (req, res) => {
 exports.updateNewsPost = catchAsync(async (req, res) => {
   const {
     title, content, status, creator, sourceUrl, 
-    imageThumbnail, imagesUrl, tags, sourceDate
+    thumbnailImage, imagesUrl, tags, sourceDate
   } = req.body;
   
   // Process the tags from comma-separated string to array
   const tagsArray = tags ? tags.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
   
-  // Process imagesUrl from newline-separated string to array
-  const imagesUrlArray = imagesUrl ? 
-    imagesUrl.split('\n').map(url => url.trim()).filter(url => url) : 
-    [];
+  // Process imagesUrl from newline-separated string to array of objects
+  let imagesUrlArray = [];
+  if (imagesUrl) {
+    // Get the URLs by splitting newlines
+    const urls = imagesUrl.split('\n').map(url => url.trim()).filter(url => url);
+    
+    // Get existing newsPost to preserve metadata if possible
+    const existingPost = await newsPostService.getNewsPostById(req.params.id);
+    const existingImages = existingPost && existingPost.imagesUrl ? existingPost.imagesUrl : [];
+    
+    // Convert each URL into the proper object format with id
+    imagesUrlArray = urls.map((url, index) => {
+      // Check if this URL already exists in the current images
+      const existingImage = existingImages.find(img => img.url === url);
+      if (existingImage) {
+        // Return the existing image object to preserve metadata
+        return existingImage;
+      }
+      // Create a new image object
+      return {
+        id: `img${index}`,
+        url: url,
+        caption: '',
+        type: 'figure'
+      };
+    });
+  }
+  
+  // Get existing post to process the content properly
+  const existingPost = await newsPostService.getNewsPostById(req.params.id);
+  
+  // Process content - we need to convert the text back to a proper content object
+  let contentMap = new Map();
+  if (existingPost && existingPost.content) {
+    // Preserve the original content structure/keys
+    const contentKeys = Object.keys(existingPost.content);
+    
+    // If we have a string from the textarea, split by double newlines to get paragraphs
+    if (content && typeof content === 'string') {
+      const paragraphs = content.split('\n\n').filter(p => p.trim());
+      
+      // Re-map the paragraphs to their original keys if possible
+      contentKeys.forEach((key, index) => {
+        if (index < paragraphs.length) {
+          contentMap.set(key, paragraphs[index].trim());
+        }
+      });
+      
+      // If we have more paragraphs than original keys, add them with new keys
+      if (paragraphs.length > contentKeys.length) {
+        for (let i = contentKeys.length; i < paragraphs.length; i++) {
+          contentMap.set(`p${i}`, paragraphs[i].trim());
+        }
+      }
+    }
+  } else if (content && typeof content === 'string') {
+    // If no existing content structure, create a simple p0, p1, etc. structure
+    const paragraphs = content.split('\n\n').filter(p => p.trim());
+    paragraphs.forEach((p, index) => {
+      contentMap.set(`p${index}`, p.trim());
+    });
+  }
   
   const newsPostData = {
     title,
-    content,
+    content: contentMap,
     status: status || 'draft',
     creator,
     sourceUrl,
-    imageThumbnail,
+    thumbnailImage,
     imagesUrl: imagesUrlArray,
     tags: tagsArray,
     sourceDate: sourceDate || null
@@ -509,7 +592,7 @@ exports.updateNewsPost = catchAsync(async (req, res) => {
   }
   
   req.flash('success', 'News post updated successfully');
-  res.redirect(`/dashboard/news-posts/${updatedNewsPost._id}`);
+  res.redirect(`/dashboard/news-posts/${updatedNewsPost._id}/preview`);
 });
 
 /**
@@ -532,30 +615,20 @@ exports.deleteNewsPost = catchAsync(async (req, res) => {
  */
 exports.getScraperDashboard = catchAsync(async (req, res) => {
   try {
-    // Fetch data for the dashboard from the scraper API
     const axios = require('axios');
     const SCRAPER_API_URL = (process.env.SCRAPER_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
     
-    // Helper function to build correct API URLs
-    function buildUrl(endpoint) {
-      // Ensure endpoint starts with a slash
-      if (!endpoint.startsWith('/')) {
-        endpoint = '/' + endpoint;
-      }
-      return `${SCRAPER_API_URL}${endpoint}`;
-    }
+    // Get API status
+    const statusResponse = await axios.get(`${SCRAPER_API_URL}/api/v1/monitoring/status`).catch(err => {
+      return { data: { status: 'error', message: 'Failed to connect to scraper API' } };
+    });
     
-    // Make parallel requests for better performance
-    const [statusResponse, statsResponse] = await Promise.all([
-      axios.get(buildUrl('/api/v1/monitoring/status')).catch(err => ({ 
-        data: { status: 'error', message: err.message }
-      })),
-      axios.get(buildUrl('/api/v1/monitoring/stats')).catch(err => ({ 
-        data: { status: 'error', message: err.message }
-      }))
-    ]);
+    // Get stats
+    const statsResponse = await axios.get(`${SCRAPER_API_URL}/api/v1/monitoring/stats`).catch(err => {
+      return { data: { status: 'error' } };
+    });
     
-    // Try to get scrapers list from different possible endpoints
+    // Get scrapers list
     let scrapers = [];
     try {
       // First try the v1/scrapers endpoint
@@ -572,18 +645,8 @@ exports.getScraperDashboard = catchAsync(async (req, res) => {
           const scrapersAlt2Response = await axios.get(buildUrl('/scrapers'));
           scrapers = scrapersAlt2Response.data.scrapers || [];
         } catch (alt2Error) {
-          // If all fails, create a mock scraper for testing
-          scrapers = [{
-            id: 'demo',
-            name: 'Demo Scraper',
-            website_name: 'Demo News Site',
-            website_url: 'https://example.com',
-            status: 'idle',
-            schedule: null,
-            last_run: null,
-            articles_count: 0
-          }];
-          console.log('Using mock scraper because API endpoints not found:', scrapersError.message);
+          // If all fails, log the error but don't add a mock scraper
+          console.log('No scrapers found or API error:', scrapersError.message, altError.message, alt2Error.message);
         }
       }
     }
@@ -628,13 +691,6 @@ exports.runScraper = catchAsync(async (req, res) => {
   const { scraperId } = req.params;
   
   try {
-    // Special handling for the demo scraper
-    if (scraperId === 'demo') {
-      // Flash a success message as if the scraper started
-      req.flash('success', 'Demo scraper started successfully. This is a simulation.');
-      return res.redirect('/dashboard/scraper');
-    }
-    
     const axios = require('axios');
     const SCRAPER_API_URL = (process.env.SCRAPER_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
     
@@ -673,12 +729,6 @@ exports.stopScraper = catchAsync(async (req, res) => {
   const { scraperId } = req.params;
   
   try {
-    // Special handling for demo scraper
-    if (scraperId === 'demo') {
-      req.flash('success', 'Demo scraper stopped successfully (simulation only)');
-      return res.redirect('/dashboard/scraper');
-    }
-    
     const axios = require('axios');
     const SCRAPER_API_URL = (process.env.SCRAPER_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
     
@@ -706,12 +756,6 @@ exports.scheduleScraper = catchAsync(async (req, res) => {
       return res.redirect('/dashboard/scraper');
     }
     
-    // Special handling for demo scraper
-    if (scraperId === 'demo') {
-      req.flash('success', `Demo scraper scheduled with "${schedule}" (simulation only)`);
-      return res.redirect('/dashboard/scraper');
-    }
-    
     const axios = require('axios');
     const SCRAPER_API_URL = (process.env.SCRAPER_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
     
@@ -733,12 +777,6 @@ exports.unscheduleScraper = catchAsync(async (req, res) => {
   const { scraperId } = req.params;
   
   try {
-    // Special handling for demo scraper
-    if (scraperId === 'demo') {
-      req.flash('success', 'Demo scraper unscheduled successfully (simulation only)');
-      return res.redirect('/dashboard/scraper');
-    }
-    
     const axios = require('axios');
     const SCRAPER_API_URL = (process.env.SCRAPER_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
     
@@ -754,154 +792,53 @@ exports.unscheduleScraper = catchAsync(async (req, res) => {
 });
 
 /**
- * Show manual scraping form for a specific scraper
- */
-exports.getManualScrapingForm = catchAsync(async (req, res) => {
-  const { scraperId } = req.params;
-  
-  try {
-    let scraper;
-    
-    // Special handling for demo scraper
-    if (scraperId === 'demo') {
-      scraper = {
-        id: 'demo',
-        name: 'Demo Scraper',
-        website_name: 'Demo News Site',
-        website_url: 'https://example.com',
-        description: 'This is a demo scraper for showing the features of the manual scraping process.'
-      };
-    } else {
-      const axios = require('axios');
-      const SCRAPER_API_URL = (process.env.SCRAPER_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
-      
-      // Get the scraper details
-      const response = await axios.get(`${SCRAPER_API_URL}/api/v1/scrapers/${scraperId}`).catch(err => {
-        return { data: { scraper: { id: scraperId, name: `Scraper ${scraperId}` } } };
-      });
-      
-      scraper = response.data.scraper || { id: scraperId, name: `Scraper ${scraperId}` };
-    }
-    
-    res.render('dashboard/scraper-manual', {
-      title: `Manual Scraping - ${scraper.name}`,
-      active: 'scraper',
-      scraper,
-      scraperApiUrl: process.env.SCRAPER_API_URL || 'http://localhost:8000',
-      csrfToken: req.csrfToken ? req.csrfToken() : null,
-      messages: {
-        error: req.flash('error'),
-        success: req.flash('success'),
-        info: req.flash('info')
-      }
-    });
-  } catch (error) {
-    req.flash('error', `Failed to load manual scraping form: ${error.message}`);
-    res.redirect('/dashboard/scraper');
-  }
-});
-
-/**
- * Start a manual scraping job with progress tracking
- */
-exports.startManualScraping = catchAsync(async (req, res) => {
-  const { scraperId } = req.params;
-  
-  try {
-    // Special handling for the demo scraper
-    if (scraperId === 'demo') {
-      // For demo scraper, we'll generate a mock job ID and redirect to progress
-      const mockJobId = 'demo-' + Date.now();
-      return res.redirect(`/dashboard/scraper/${scraperId}/progress/${mockJobId}`);
-    }
-    
-    const axios = require('axios');
-    const SCRAPER_API_URL = (process.env.SCRAPER_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
-    
-    // Start the scraper with progress tracking
-    const response = await axios.post(`${SCRAPER_API_URL}/api/v1/scrapers/${scraperId}/run`, {
-      detailed_progress: true
-    });
-    
-    // Get the job ID from the response
-    const jobId = response.data.jobId || 'latest';
-    
-    // Redirect to the progress page
-    res.redirect(`/dashboard/scraper/${scraperId}/progress/${jobId}`);
-  } catch (error) {
-    req.flash('error', `Failed to start manual scraping: ${error.message}`);
-    res.redirect(`/dashboard/scraper/${scraperId}/manual`);
-  }
-});
-
-/**
  * Show scraping progress for a specific job
  */
 exports.getScrapingProgress = catchAsync(async (req, res) => {
   const { scraperId, jobId } = req.params;
   
   try {
-    // Special handling for the demo scraper
     let scraper;
     let initialProgress;
     
-    if (scraperId === 'demo') {
-      // For demo scraper, use mock data
+    // For real scrapers, get data from API
+    const axios = require('axios');
+    const SCRAPER_API_URL = (process.env.SCRAPER_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
+    
+    // First get the scraper details from status API
+    const statusResponse = await axios.get(`${SCRAPER_API_URL}/api/v1/monitoring/status`).catch(err => {
+      return { data: { enabled_sources: [] } };
+    });
+    
+    // Format the scraper info
+    const enabledSources = statusResponse.data.enabled_sources || [];
+    if (enabledSources.includes(scraperId)) {
       scraper = {
-        id: 'demo',
-        name: 'Demo Scraper',
-        website_name: 'Demo News Site',
-        website_url: 'https://example.com'
-      };
-      
-      // Initial progress data
-      initialProgress = {
-        status: 'running',
-        stage: 'init',
-        message: 'Initializing demo scraper',
-        progress: 5,
-        details: { scraperId, jobId }
+        id: scraperId,
+        name: scraperId.charAt(0).toUpperCase() + scraperId.slice(1).replace(/_/g, ' '),
+        website_name: `${scraperId.charAt(0).toUpperCase() + scraperId.slice(1).replace(/_/g, ' ')} News`,
+        website_url: `https://example.com/${scraperId}` // Replace with actual URL mapping if needed
       };
     } else {
-      // For real scrapers, get data from API
-      const axios = require('axios');
-      const SCRAPER_API_URL = (process.env.SCRAPER_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
-      
-      // First get the scraper details from status API
-      const statusResponse = await axios.get(`${SCRAPER_API_URL}/api/v1/monitoring/status`).catch(err => {
-        return { data: { enabled_sources: [] } };
-      });
-      
-      // Format the scraper info
-      const enabledSources = statusResponse.data.enabled_sources || [];
-      if (enabledSources.includes(scraperId)) {
-        scraper = {
-          id: scraperId,
-          name: scraperId.charAt(0).toUpperCase() + scraperId.slice(1).replace(/_/g, ' '),
-          website_name: `${scraperId.charAt(0).toUpperCase() + scraperId.slice(1).replace(/_/g, ' ')} News`,
-          website_url: `https://example.com/${scraperId}`
-        };
-      } else {
-        scraper = { id: scraperId, name: `Scraper ${scraperId}` };
-      }
-      
-      // Now get the progress data
-      const progressResponse = await axios.get(`${SCRAPER_API_URL}/api/v1/monitoring/progress`).catch(err => {
-        return { data: { is_scraping: false, total_progress: 0, status: 'pending', sources: {} } };
-      });
-      
-      // Format the progress data to match our expected structure
-      const progressData = progressResponse.data;
-      const sourceProgress = progressData.sources && progressData.sources[scraperId];
-      
-      initialProgress = {
-        status: sourceProgress ? sourceProgress.status : progressData.status || 'pending',
-        stage: getStageFromProgress(progressData, scraperId),
-        message: sourceProgress ? `Scraping ${scraperId}` : progressData.status || 'Initializing...',
-        progress: sourceProgress ? sourceProgress.progress : progressData.total_progress || 0,
-        details: getDetailsFromProgress(progressData, scraperId)
-      };
+      scraper = { id: scraperId, name: `Scraper ${scraperId}` };
     }
+    
+    // Now get the progress data
+    const progressResponse = await axios.get(`${SCRAPER_API_URL}/api/v1/monitoring/progress`).catch(err => {
+      return { data: { is_scraping: false, total_progress: 0, status: 'pending', sources: {} } };
+    });
+    
+    // Format the progress data to match our expected structure
+    const progressData = progressResponse.data;
+    const sourceProgress = progressData.sources && progressData.sources[scraperId];
+    
+    initialProgress = {
+      status: sourceProgress ? sourceProgress.status : progressData.status || 'pending',
+      stage: getStageFromProgress(progressData, scraperId),
+      message: sourceProgress ? `Scraping ${scraperId}` : progressData.status || 'Initializing...',
+      progress: sourceProgress ? sourceProgress.progress : progressData.total_progress || 0,
+      details: getDetailsFromProgress(progressData, scraperId)
+    };
     
     res.render('dashboard/scraper-progress', {
       title: `Scraping Progress - ${scraper.name}`,
@@ -910,7 +847,7 @@ exports.getScrapingProgress = catchAsync(async (req, res) => {
       jobId,
       initialProgress,
       scraperApiUrl: process.env.SCRAPER_API_URL || 'http://localhost:8000',
-      useMockData: scraperId === 'demo', // Flag to tell the frontend to use mock data
+      useMockData: false, // No longer using mock data
       csrfToken: req.csrfToken ? req.csrfToken() : null,
       messages: {
         error: req.flash('error'),
@@ -924,107 +861,58 @@ exports.getScrapingProgress = catchAsync(async (req, res) => {
   }
 });
 
-// Helper function to determine the current stage based on progress data
+// Helper function to determine stage from progress data
 function getStageFromProgress(progressData, scraperId) {
-  // Default stage is 'init'
-  let stage = 'init';
-  
-  // If no progress data, return init
-  if (!progressData || !progressData.sources) {
-    return stage;
+  let progress = 0;
+  if (scraperId && progressData.sources && progressData.sources[scraperId]) {
+    progress = progressData.sources[scraperId].progress || 0;
+  } else if (typeof progressData.progress === 'number') {
+    progress = progressData.progress;
+  } else if (typeof progressData.total_progress === 'number') {
+    progress = progressData.total_progress;
   }
   
-  // Get source-specific progress if available
-  const sourceProgress = progressData.sources[scraperId];
-  if (!sourceProgress) {
-    return stage;
-  }
-  
-  // Determine stage based on progress percentage
-  const progress = sourceProgress.progress || 0;
-  
-  if (progress < 10) {
-    return 'init';
-  } else if (progress < 30) {
-    return 'getting_news_list';
-  } else if (progress < 60) {
-    return 'scraping_articles';
-  } else if (progress < 90) {
-    return 'processing_html';
-  } else if (progress < 100) {
-    return 'saving_processed_items';
-  } else {
-    return 'complete';
-  }
+  if (progress < 10) return 'init';
+  if (progress < 30) return 'getting_news_list';
+  if (progress < 60) return 'scraping_articles';
+  if (progress < 90) return 'processing_html';
+  if (progress < 100) return 'saving_processed_items';
+  return 'complete';
 }
 
-// Helper function to get detailed information based on the current stage
+// Helper function to get details based on stage
 function getDetailsFromProgress(progressData, scraperId) {
-  // Default details are empty
+  let sourceProgress = null;
+  if (scraperId && progressData.sources && progressData.sources[scraperId]) {
+    sourceProgress = progressData.sources[scraperId];
+  }
+  const stage = getStageFromProgress(progressData, scraperId);
   const details = {};
   
-  // If no progress data, return empty details
-  if (!progressData || !progressData.sources) {
-    return details;
-  }
-  
-  // Get source-specific progress if available
-  const sourceProgress = progressData.sources[scraperId];
-  if (!sourceProgress) {
-    return details;
-  }
-  
-  // Determine stage based on progress percentage
-  const progress = sourceProgress.progress || 0;
-  const stage = getStageFromProgress(progressData, scraperId);
-  
-  // Populate details based on stage
   switch (stage) {
     case 'getting_news_list':
-      // Simulate articles list (since we don't have this directly from the API)
-      details.articles = [
-        { title: 'Article 1', url: 'https://example.com/news/1' },
-        { title: 'Article 2', url: 'https://example.com/news/2' },
-        { title: 'Article 3', url: 'https://example.com/news/3' }
-      ];
+      details.articles = sourceProgress?.articles?.map(a => ({ title: a.title, url: a.url })) || [];
       break;
-      
     case 'scraping_articles':
-      // Simulate current article being scraped
-      details.current = 1;
-      details.total = 3;
-      details.currentUrl = 'https://example.com/news/1';
+      details.current = sourceProgress?.current_article_index || 1;
+      details.total = sourceProgress?.articles_found || details.articles?.length || 0;
+      details.currentUrl = sourceProgress?.current_article?.url || '#';
+      details.currentTitle = sourceProgress?.current_article?.title || 'Loading...';
       break;
-      
     case 'processing_html':
-      // Simulate current article being processed
-      details.current = 2;
-      details.total = 3;
-      details.currentUrl = 'https://example.com/news/2';
+      details.current = sourceProgress?.processed_article_index || 1;
+      details.total = sourceProgress?.articles_found || details.articles?.length || 0;
+      details.currentUrl = sourceProgress?.current_processed_article?.url || '#';
+      details.currentTitle = sourceProgress?.current_processed_article?.title || 'Processing...';
       break;
-      
     case 'saving_processed_items':
-      // Simulate processed item
-      details.processedItem = {
-        title: 'Sample Article',
-        sourceUrl: 'https://example.com/news/3',
-        sourceDate: new Date().toISOString(),
-        creator: 'Author Name',
-        thumbnailImage: 'https://example.com/images/thumbnail.jpg',
-        content: 'This is a sample article content...',
-        imagesUrl: ['https://example.com/images/1.jpg', 'https://example.com/images/2.jpg'],
-        tags: ['sample', 'news', 'test']
-      };
+      details.processedItem = sourceProgress?.last_processed_article || { title: 'Saving...' };
       break;
-      
     case 'complete':
-      // Provide completion summary
-      details.scraped = sourceProgress.articles_found || 3;
-      details.saved = sourceProgress.articles_processed || 3;
-      details.errors = 0;
-      
-      // Calculate duration if available
-      if (sourceProgress.start_time && sourceProgress.end_time) {
+      details.scraped = sourceProgress?.articles_found || 0;
+      details.saved = sourceProgress?.articles_processed || 0;
+      details.errors = sourceProgress?.errors || 0;
+      if (sourceProgress?.start_time && sourceProgress?.end_time) {
         const start = new Date(sourceProgress.start_time);
         const end = new Date(sourceProgress.end_time);
         const durationMs = end - start;
@@ -1033,13 +921,35 @@ function getDetailsFromProgress(progressData, scraperId) {
         const seconds = durationSec % 60;
         details.duration = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
       } else {
-        details.duration = '00:30';
+        details.duration = 'N/A';
       }
       break;
   }
-  
   return details;
 }
+
+/**
+ * Show preview page for a news post
+ */
+exports.previewNewsPost = catchAsync(async (req, res, next) => {
+  const newsPost = await newsPostService.getNewsPostById(req.params.id);
+  
+  if (!newsPost) {
+    req.flash('error', 'News post not found.');
+    return res.redirect('/dashboard/news-posts');
+  }
+
+  // Normalize image format for display
+  normalizeImagesFormat(newsPost); 
+
+  res.render('dashboard/news-posts/preview', {
+    title: `Preview: ${newsPost.title}`,
+    active: 'news-posts',
+    newsPost,
+    layout: './layouts/main' // Ensure layout is specified if needed
+    // No need for messages or csrfToken in a pure preview usually
+  });
+});
 
 module.exports = {
   getDashboard: exports.getDashboard,
@@ -1055,7 +965,6 @@ module.exports = {
   getNewsPostsPage: exports.getNewsPostsPage,
   getCreateNewsPostPage: exports.getCreateNewsPostPage,
   createNewsPost: exports.createNewsPost,
-  getNewsPostPage: exports.getNewsPostPage,
   getEditNewsPostPage: exports.getEditNewsPostPage,
   updateNewsPost: exports.updateNewsPost,
   deleteNewsPost: exports.deleteNewsPost,
@@ -1064,7 +973,6 @@ module.exports = {
   stopScraper: exports.stopScraper,
   scheduleScraper: exports.scheduleScraper,
   unscheduleScraper: exports.unscheduleScraper,
-  getManualScrapingForm: exports.getManualScrapingForm,
-  startManualScraping: exports.startManualScraping,
-  getScrapingProgress: exports.getScrapingProgress
+  getScrapingProgress: exports.getScrapingProgress,
+  previewNewsPost: exports.previewNewsPost
 }; 

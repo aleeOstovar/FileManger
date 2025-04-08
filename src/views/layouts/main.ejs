@@ -3,109 +3,429 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><%= typeof title !== 'undefined' ? title + ' - ' : '' %>File Manager Dashboard</title>
+  <title><%= typeof title !== 'undefined' ? title + ' - ' : '' %>Crypto News Dashboard</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
+    :root {
+      --sidebar-width: 250px;
+      --header-height: 60px;
+      --primary-color: #4361ee;
+      --secondary-color: #3f37c9;
+      --light-bg: #f8f9fa;
+      --dark-bg: #212529;
+      --border-color: #e9ecef;
+      --success-color: #2ecc71;
+      --warning-color: #f39c12;
+      --info-color: #3498db;
+      --danger-color: #e74c3c;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f5f7fb;
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+    }
+    
+    /* Sidebar styles */
     .sidebar {
       position: fixed;
       top: 0;
-      bottom: 0;
       left: 0;
-      z-index: 100;
-      padding: 48px 0 0;
-      box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+      bottom: 0;
+      width: var(--sidebar-width);
+      background: var(--dark-bg);
+      color: #fff;
+      z-index: 1000;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
     }
-    .sidebar-sticky {
-      position: sticky;
-      top: 0;
-      height: calc(100vh - 48px);
-      padding-top: .5rem;
-      overflow-x: hidden;
+    
+    .sidebar-brand {
+      height: var(--header-height);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      background: var(--secondary-color);
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    
+    .sidebar-brand a {
+      color: white;
+      text-decoration: none;
+      font-size: 1.2rem;
+    }
+    
+    .sidebar-menu {
+      padding: 20px 0;
+      height: calc(100% - var(--header-height));
       overflow-y: auto;
     }
-    .navbar-brand {
-      padding-top: .75rem;
-      padding-bottom: .75rem;
-      background-color: rgba(0, 0, 0, .25);
-      box-shadow: inset -1px 0 0 rgba(0, 0, 0, .25);
+    
+    .nav-item {
+      margin-bottom: 5px;
     }
+    
     .nav-link {
+      display: flex;
+      align-items: center;
+      padding: 12px 20px;
+      color: rgba(255, 255, 255, 0.8);
+      transition: all 0.3s;
       font-weight: 500;
-      color: #333;
+      position: relative;
+      border-left: 3px solid transparent;
     }
+    
+    .nav-link i {
+      margin-right: 10px;
+      font-size: 1.1rem;
+      width: 24px;
+      text-align: center;
+    }
+    
+    .nav-link:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.05);
+      border-left: 3px solid var(--primary-color);
+    }
+    
     .nav-link.active {
-      color: #2470dc;
+      color: #fff;
+      background: var(--primary-color);
+      border-left: 3px solid #fff;
+    }
+    
+    /* Header styles */
+    .top-header {
+      position: fixed;
+      top: 0;
+      left: var(--sidebar-width);
+      right: 0;
+      height: var(--header-height);
+      background: #fff;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      z-index: 999;
+      transition: all 0.3s ease;
+    }
+    
+    .header-left {
+      display: flex;
+      align-items: center;
+    }
+    
+    .toggle-sidebar {
+      color: #555;
+      font-size: 1.3rem;
+      cursor: pointer;
+      margin-right: 20px;
+    }
+    
+    .header-right {
+      display: flex;
+      align-items: center;
+    }
+    
+    .user-dropdown {
+      margin-left: 15px;
+      position: relative;
+    }
+    
+    .user-dropdown .dropdown-toggle {
+      background: transparent;
+      border: none;
+      color: #555;
+      font-weight: 500;
+      padding: 6px 10px;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+    }
+    
+    .user-dropdown .dropdown-toggle::after {
+      display: none;
+    }
+    
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--primary-color);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 10px;
+    }
+    
+    /* Main content */
+    .main-content {
+      margin-left: var(--sidebar-width);
+      margin-top: var(--header-height);
+      padding: 20px;
+      min-height: calc(100vh - var(--header-height));
+      transition: all 0.3s ease;
+    }
+    
+    /* Card styles */
+    .card {
+      border: none;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    
+    .card-header {
+      background-color: #fff;
+      border-bottom: 1px solid var(--border-color);
+      padding: 15px 20px;
+      font-weight: 600;
+    }
+    
+    .card-body {
+      padding: 20px;
+    }
+    
+    /* Stats cards */
+    .stats-card {
+      height: 100%;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    
+    .stats-card .card-body {
+      padding: 25px 20px;
+    }
+    
+    .stats-card .icon {
+      opacity: 0.8;
+      font-size: 2rem;
+    }
+    
+    .stats-card .card-footer {
+      background-color: rgba(0, 0, 0, 0.05);
+      border-top: none;
+      padding: 15px 20px;
+    }
+    
+    /* Table styles */
+    .table {
+      width: 100%;
+      margin-bottom: 0;
+    }
+    
+    .table th {
+      font-weight: 600;
+      border-top: none;
+      background-color: var(--light-bg);
+      white-space: nowrap;
+    }
+    
+    .table td {
+      vertical-align: middle;
+    }
+    
+    /* Status badges */
+    .badge {
+      padding: 6px 10px;
+      font-weight: 500;
+      border-radius: 5px;
+    }
+    
+    /* Mobile responsive */
+    @media (max-width: 991.98px) {
+      .sidebar {
+        transform: translateX(-100%);
+      }
+      
+      .top-header {
+        left: 0;
+      }
+      
+      .main-content {
+        margin-left: 0;
+      }
+      
+      .sidebar-shown .sidebar {
+        transform: translateX(0);
+      }
+      
+      .sidebar-shown .main-content,
+      .sidebar-shown .top-header {
+        margin-left: var(--sidebar-width);
+      }
+    }
+    
+    /* Alert styles */
+    .alert {
+      border-radius: 8px;
+      border: none;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+    
+    /* Button styles */
+    .btn {
+      border-radius: 6px;
+      font-weight: 500;
+      padding: 8px 16px;
+    }
+    
+    .btn-sm {
+      padding: 5px 10px;
+      font-size: 0.85rem;
+    }
+    
+    .btn-primary {
+      background-color: var(--primary-color);
+      border-color: var(--primary-color);
+    }
+    
+    .btn-success {
+      background-color: var(--success-color);
+      border-color: var(--success-color);
+    }
+    
+    .btn-warning {
+      background-color: var(--warning-color);
+      border-color: var(--warning-color);
+    }
+    
+    .btn-info {
+      background-color: var(--info-color);
+      border-color: var(--info-color);
+    }
+    
+    .btn-danger {
+      background-color: var(--danger-color);
+      border-color: var(--danger-color);
     }
   </style>
 </head>
 <body>
-  <header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
-    <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3 fs-6" href="/dashboard">File Manager</a>
-    <button class="navbar-toggler position-absolute d-md-none collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="navbar-nav">
-      <div class="nav-item text-nowrap">
-        <% if (user) { %>
-          <span class="nav-link px-3 text-white">Welcome, <%= user.name %></span>
-          <a class="nav-link px-3" href="/dashboard/logout">Sign out</a>
-        <% } %>
+  <% if (user) { %>
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-brand">
+        <a href="/dashboard">Crypto News Hub</a>
+      </div>
+      <div class="sidebar-menu">
+        <ul class="nav flex-column">
+          <li class="nav-item">
+            <a class="nav-link <%= typeof active !== 'undefined' && active === 'dashboard' ? 'active' : '' %>" href="/dashboard">
+              <i class="fas fa-tachometer-alt"></i> Dashboard
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link <%= typeof active !== 'undefined' && active === 'api-keys' ? 'active' : '' %>" href="/dashboard/api-keys">
+              <i class="fas fa-key"></i> API Keys
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link <%= typeof active !== 'undefined' && active === 'news-posts' ? 'active' : '' %>" href="/dashboard/news-posts">
+              <i class="fas fa-newspaper"></i> News Posts
+            </a>
+          </li>
+          <% if (user.role === 'admin' || user.role === 'manager') { %>
+            <li class="nav-item">
+              <a class="nav-link <%= typeof active !== 'undefined' && active === 'scraper' ? 'active' : '' %>" href="/dashboard/scraper">
+                <i class="fas fa-robot"></i> News Scraper
+              </a>
+            </li>
+          <% } %>
+          <% if (user.role === 'admin') { %>
+            <li class="nav-item">
+              <a class="nav-link <%= typeof active !== 'undefined' && active === 'users' ? 'active' : '' %>" href="/dashboard/users">
+                <i class="fas fa-users"></i> Users
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link <%= typeof active !== 'undefined' && active === 'settings' ? 'active' : '' %>" href="/dashboard/settings">
+                <i class="fas fa-cog"></i> Settings
+              </a>
+            </li>
+          <% } %>
+        </ul>
       </div>
     </div>
-  </header>
+    
+    <!-- Header -->
+    <div class="top-header">
+      <div class="header-left">
+        <div class="toggle-sidebar" id="sidebarToggle">
+          <i class="fas fa-bars"></i>
+        </div>
+        <h5 class="mb-0"><%= typeof title !== 'undefined' ? title : 'Dashboard' %></h5>
+      </div>
+      <div class="header-right">
+        <div class="user-dropdown dropdown">
+          <button class="dropdown-toggle" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+            <div class="user-avatar">
+              <%= user.name.charAt(0).toUpperCase() %>
+            </div>
+            <span class="d-none d-sm-inline-block"><%= user.name %></span>
+            <i class="fas fa-chevron-down ms-2 small"></i>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+            <li><a class="dropdown-item" href="/dashboard/profile"><i class="fas fa-user me-2"></i> Profile</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="/dashboard/logout"><i class="fas fa-sign-out-alt me-2"></i> Sign out</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="main-content">
+      <!-- Alert Messages -->
+      <div class="alerts-container">
+        <% if (messages && messages.success && messages.success.length > 0) { %>
+          <% messages.success.forEach(msg => { %>
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+              <i class="fas fa-check-circle me-2"></i> <%= msg %>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          <% }) %>
+        <% } %>
+        
+        <% if (messages && messages.error && messages.error.length > 0) { %>
+          <% messages.error.forEach(msg => { %>
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+              <i class="fas fa-exclamation-circle me-2"></i> <%= msg %>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          <% }) %>
+        <% } %>
 
-  <div class="container-fluid">
-    <div class="row">
-      <% if (user) { %>
-        <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
-          <div class="position-sticky pt-3 sidebar-sticky">
-            <ul class="nav flex-column">
-              <li class="nav-item">
-                <a class="nav-link <%= typeof active !== 'undefined' && active === 'dashboard' ? 'active' : '' %>" href="/dashboard">
-                  <i class="bi bi-speedometer2"></i> Dashboard
-                </a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link <%= typeof active !== 'undefined' && active === 'api-keys' ? 'active' : '' %>" href="/dashboard/api-keys">
-                  <i class="bi bi-key"></i> API Keys
-                </a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link <%= typeof active !== 'undefined' && active === 'news-posts' ? 'active' : '' %>" href="/dashboard/news-posts">
-                  <i class="bi bi-newspaper"></i> News Posts
-                </a>
-              </li>
-              <% if (user.role === 'admin' || user.role === 'manager') { %>
-                <li class="nav-item">
-                  <a class="nav-link <%= typeof active !== 'undefined' && active === 'scraper' ? 'active' : '' %>" href="/dashboard/scraper">
-                    <i class="bi bi-robot"></i> News Scraper
-                  </a>
-                </li>
-              <% } %>
-              <% if (user.role === 'admin') { %>
-                <li class="nav-item">
-                  <a class="nav-link <%= typeof active !== 'undefined' && active === 'users' ? 'active' : '' %>" href="/dashboard/users">
-                    <i class="bi bi-people"></i> Users
-                  </a>
-                </li>
-                <li class="nav-item">
-                  <a class="nav-link <%= typeof active !== 'undefined' && active === 'settings' ? 'active' : '' %>" href="/dashboard/settings">
-                    <i class="bi bi-gear"></i> Settings
-                  </a>
-                </li>
-              <% } %>
-            </ul>
-          </div>
-        </nav>
-      <% } %>
+        <% if (messages && messages.info && messages.info.length > 0) { %>
+          <% messages.info.forEach(msg => { %>
+            <div class="alert alert-info alert-dismissible fade show" role="alert">
+              <i class="fas fa-info-circle me-2"></i> <%= msg %>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          <% }) %>
+        <% } %>
+      </div>
       
-      <main class="<%= user ? 'col-md-9 ms-sm-auto col-lg-10 px-md-4' : 'col-12' %>">
-        <div class="mt-4">
+      <!-- Page Content -->
+      <%- body %>
+    </div>
+  <% } else { %>
+    <div class="container">
+      <div class="row justify-content-center mt-5">
+        <div class="col-md-6">
+          <!-- Alert Messages for Login/Register pages -->
           <% if (messages && messages.success && messages.success.length > 0) { %>
             <% messages.success.forEach(msg => { %>
               <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <%= msg %>
+                <i class="fas fa-check-circle me-2"></i> <%= msg %>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
               </div>
             <% }) %>
@@ -114,27 +434,52 @@
           <% if (messages && messages.error && messages.error.length > 0) { %>
             <% messages.error.forEach(msg => { %>
               <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <%= msg %>
+                <i class="fas fa-exclamation-circle me-2"></i> <%= msg %>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
               </div>
             <% }) %>
           <% } %>
-
-          <% if (messages && messages.info && messages.info.length > 0) { %>
-            <% messages.info.forEach(msg => { %>
-              <div class="alert alert-info alert-dismissible fade show" role="alert">
-                <%= msg %>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-              </div>
-            <% }) %>
-          <% } %>
+          
+          <!-- Login/Register Content -->
+          <%- body %>
         </div>
-        
-        <%- body %>
-      </main>
+      </div>
     </div>
-  </div>
+  <% } %>
   
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  
+  <!-- Custom Script for Sidebar Toggle -->
+  <script>
+    $(document).ready(function() {
+      // Toggle sidebar
+      $('#sidebarToggle').on('click', function() {
+        $('body').toggleClass('sidebar-shown');
+      });
+      
+      // Initialize tooltips
+      var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+      var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+      });
+      
+      // Auto-hide alerts after 5 seconds
+      setTimeout(function() {
+        $('.alert').fadeOut('slow');
+      }, 5000);
+      
+      // Handle responsive sidebar
+      function checkWidth() {
+        if ($(window).width() > 991) {
+          $('body').removeClass('sidebar-shown');
+        }
+      }
+      
+      // Check on load and resize
+      checkWidth();
+      $(window).resize(checkWidth);
+    });
+  </script>
 </body>
 </html> 

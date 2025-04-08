@@ -2,7 +2,7 @@
   <h1>News Posts</h1>
   <% if (user.role === 'admin' || user.role === 'manager') { %>
     <a href="/dashboard/news-posts/create" class="btn btn-primary">
-      <i class="bi bi-plus-circle"></i> Create News Post
+      <i class="fas fa-plus-circle"></i> Create News Post
     </a>
   <% } %>
 </div>
@@ -24,7 +24,7 @@
       </div>
       <div class="col-md-2 d-flex align-items-end">
         <button type="submit" class="btn btn-primary w-100">
-          <i class="bi bi-search"></i> Search
+          <i class="fas fa-search"></i> Search
         </button>
       </div>
     </form>
@@ -33,7 +33,7 @@
 
 <% if (newsPosts.length === 0) { %>
   <div class="alert alert-info">
-    <i class="bi bi-info-circle"></i> No news posts found.
+    <i class="fas fa-info-circle"></i> No news posts found.
   </div>
 <% } else { %>
   <div class="table-responsive">
@@ -45,14 +45,14 @@
           <th>Status</th>
           <th>Tags</th>
           <th>Date</th>
-          <th>Actions</th>
+          <th class="text-center">Actions</th>
         </tr>
       </thead>
       <tbody>
         <% newsPosts.forEach(post => { %>
           <tr>
             <td>
-              <a href="/dashboard/news-posts/<%= post._id %>"><%= post.title %></a>
+              <a href="/dashboard/news-posts/<%= post._id %>/preview" class="text-decoration-none"><%= post.title %></a>
             </td>
             <td><%= post.creator || 'N/A' %></td>
             <td>
@@ -77,19 +77,19 @@
               <% } %>
             </td>
             <td><%= new Date(post.createdAt).toLocaleDateString() %></td>
-            <td>
-              <div class="btn-group btn-group-sm">
-                <a href="/dashboard/news-posts/<%= post._id %>" class="btn btn-info">
-                  <i class="bi bi-eye"></i>
+            <td class="text-center">
+              <div class="d-inline-flex">
+                <a href="/dashboard/news-posts/<%= post._id %>/preview" class="btn btn-sm btn-outline-primary rounded-circle mx-1" data-bs-toggle="tooltip" title="Preview">
+                  <i class="fas fa-eye"></i>
                 </a>
                 <% if (user.role === 'admin' || user.role === 'manager') { %>
-                  <a href="/dashboard/news-posts/<%= post._id %>/edit" class="btn btn-warning">
-                    <i class="bi bi-pencil"></i>
+                  <a href="/dashboard/news-posts/<%= post._id %>/edit" class="btn btn-sm btn-outline-secondary rounded-circle mx-1" data-bs-toggle="tooltip" title="Edit">
+                    <i class="fas fa-pencil-alt"></i>
                   </a>
                 <% } %>
                 <% if (user.role === 'admin') { %>
-                  <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal<%= post._id %>">
-                    <i class="bi bi-trash"></i>
+                  <button type="button" class="btn btn-sm btn-outline-danger rounded-circle mx-1" data-bs-toggle="modal" data-bs-target="#deleteModal<%= post._id %>" data-bs-toggle="tooltip" title="Delete">
+                    <i class="fas fa-trash-alt"></i>
                   </button>
                 <% } %>
               </div>

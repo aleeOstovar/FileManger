@@ -4,6 +4,7 @@ const axios = require('axios');
 const AppError = require('../utils/appError');
 const catchAsync = require('../utils/catchAsync');
 const logger = require('../utils/logger');
+const NewsPost = require('../models/NewsPost'); // Import NewsPost model
 
 // Normalize the Scraper API URL to ensure it doesn't have trailing slashes
 const SCRAPER_API_URL = (process.env.SCRAPER_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
@@ -22,11 +23,7 @@ function getWebsiteUrl(sourceId) {
     // Map of known scraper IDs to their actual website URLs
     const websiteMap = {
         'mihan_blockchain': 'https://mihanblockchain.com/category/news/',
-        'coindesk': 'https://www.coindesk.com',
-        'cointelegraph': 'https://cointelegraph.com',
-        'bitcoin_com': 'https://bitcoin.com',
-        'crypto_news': 'https://cryptonews.com',
-        'demo': 'https://example.com'
+        'arzdigital': 'https://arzdigital.com/breaking/',
     };
     
     // Return mapped URL or a generic one if not found
@@ -114,17 +111,7 @@ exports.getScraperProgress = catchAsync(async (req, res) => {
  */
 exports.getScrapers = catchAsync(async (req, res) => {
     try {
-        // For demo purposes, always include the demo scraper
-        const scrapers = [
-            {
-                id: 'demo',
-                name: 'Demo Scraper',
-                description: 'A demo scraper for testing the UI',
-                website_name: 'Demo News',
-                website_url: getWebsiteUrl('demo'),
-                enabled: true
-            }
-        ];
+        const scrapers = [];
 
         try {
             // Get enabled sources from status API
@@ -133,9 +120,6 @@ exports.getScrapers = catchAsync(async (req, res) => {
             
             // Add each enabled source as a scraper
             enabledSources.forEach(source => {
-                // Skip if it's the demo scraper (which we already added)
-                if (source === 'demo') return;
-                
                 scrapers.push({
                     id: source,
                     name: source.charAt(0).toUpperCase() + source.slice(1).replace(/_/g, ' '),
@@ -151,7 +135,6 @@ exports.getScrapers = catchAsync(async (req, res) => {
                 error: error.message,
                 details: error.response?.data
             });
-            // Continue with just the demo scraper
         }
         
         return res.status(200).json({
@@ -168,24 +151,14 @@ exports.getScrapers = catchAsync(async (req, res) => {
             details: error.response?.data
         });
         
-        // Return demo scraper if the API fails
         return res.status(200).json({
-            scrapers: [{
-                id: 'demo',
-                name: 'Demo Scraper',
-                website_name: 'Demo News Site',
-                website_url: getWebsiteUrl('demo'),
-                status: 'idle',
-                schedule: null,
-                last_run: null,
-                articles_count: 0
-            }]
+            scrapers: []
         });
     }
 });
 
 /**
- * Run a specific scraper
+ * Run a specific scraper and redirect to progress
  */
 exports.runScraper = catchAsync(async (req, res) => {
     const { scraperId } = req.params;
@@ -193,30 +166,16 @@ exports.runScraper = catchAsync(async (req, res) => {
     try {
         let responseData;
         
-        // Special handling for the demo scraper
-        if (scraperId === 'demo') {
-            // For demo, just return a mock response
-            responseData = {
-                message: 'Demo scraper triggered successfully',
-                job_id: 'demo-' + Date.now(),
-                status: 'running'
-            };
-        } else {
-            // For real scrapers, trigger the API
-            const response = await axios.post(
-                buildUrl(`/api/v1/monitoring/trigger?source=${scraperId}`)
-            );
-            responseData = response.data;
-        }
+        // Trigger the API
+        const response = await axios.post(
+            buildUrl(`/api/v1/monitoring/trigger?source=${scraperId}`)
+        );
+        responseData = response.data;
         
-        return res.status(200).json({
-            status: 'success',
-            data: {
-                message: `Scraper ${scraperId} triggered successfully`,
-                job_id: responseData.job_id || `job-${Date.now()}`,
-                scraper_id: scraperId
-            }
-        });
+        // Redirect to the progress page
+        const jobId = responseData.job_id || `job-${Date.now()}`;
+        req.flash('info', `Scraper ${scraperId} started. Job ID: ${jobId}`);
+        return res.redirect(`/dashboard/scraper/${scraperId}/progress/${jobId}`);
     } catch (error) {
         logger.error({
             msg: 'Error running scraper',
@@ -225,11 +184,8 @@ exports.runScraper = catchAsync(async (req, res) => {
             details: error.response?.data
         });
         
-        return res.status(error.response?.status || 500).json({
-            status: 'error',
-            message: `Failed to run scraper ${scraperId}`,
-            error: error.response?.data || error.message
-        });
+        req.flash('error', `Failed to run scraper ${scraperId}: ${error.message}`);
+        return res.redirect('/dashboard/scraper');
     }
 });
 
@@ -646,154 +602,171 @@ exports.unscheduleScraper = catchAsync(async (req, res) => {
 // Dashboard controller
 exports.renderScraperDashboard = catchAsync(async (req, res, next) => {
     try {
-        // Fetch data for the dashboard from the scraper API
+        // Fetch data for the dashboard
         let apiStatus = { status: 'unknown' };
+        let progressData = { sources: {}, is_scraping: false }; // Store progress data
         let stats = {
-            articles: {
-                total: 0,
-                last24Hours: 0
-            },
-            scrapers: {
-                active: 0,
-                total: 0
-            }
+            articles: { total: 0, last24Hours: 0 },
+            scrapers: { active: 0, total: 0 }
         };
         let scrapers = [];
-        
+        let latestLastRun = null;
+
+        // Fetch API status and progress in parallel
         try {
-            // Get API status
-            const statusResponse = await axios.get(buildUrl('/api/v1/monitoring/status')).catch(err => ({ 
-                data: { status: 'error', message: err.message }
-            }));
-            
-            // Format API status
+            const [statusResponse, progressResponse] = await Promise.all([
+                axios.get(buildUrl('/api/v1/monitoring/status')).catch(err => ({
+                    data: { status: 'error', message: err.message, enabled_sources: [], last_run_times: {} }
+                })),
+                axios.get(buildUrl('/api/v1/monitoring/progress')).catch(err => ({
+                    data: { status: 'error', message: err.message, sources: {}, is_scraping: false }
+                }))
+            ]);
+
+            // Process Status Response
             apiStatus = {
                 status: statusResponse.data.is_scraping ? 'running' : 'idle',
                 message: statusResponse.data.message || '',
                 scheduler_running: statusResponse.data.scheduler_running || false,
-                sources: statusResponse.data.enabled_sources || []
+                sources: statusResponse.data.enabled_sources || [],
+                last_run_times: statusResponse.data.last_run_times || {}
             };
-            
-            // Get stats
-            const statsResponse = await axios.get(buildUrl('/api/v1/monitoring/stats')).catch(err => ({ 
-                data: { status: 'error', message: err.message }
-            }));
-            
-            // Format stats
-            if (statsResponse.data) {
-                stats = {
-                    articles: {
-                        total: statsResponse.data.total_articles || 0,
-                        last24Hours: statsResponse.data.articles_last_24h || 0
-                    },
-                    scrapers: {
-                        active: apiStatus.sources ? apiStatus.sources.length : 0,
-                        total: apiStatus.sources ? apiStatus.sources.length : 0
-                    }
-                };
-            }
-            
-            // Get scrapers directly from status
-            const enabledSources = statusResponse.data.enabled_sources || [];
-            
-            // Always add demo scraper
-            scrapers.push({
-                id: 'demo',
-                name: 'Demo Scraper',
-                website_name: 'Demo News Site',
-                website_url: getWebsiteUrl('demo'),
-                status: 'idle',
-                schedule: null,
-                last_run: null,
-                articles_count: 0
+
+            // Process Progress Response
+            progressData = progressResponse.data || { sources: {}, is_scraping: false };
+
+        } catch (error) {
+            logger.error({
+                msg: 'Error fetching scraper API status/progress',
+                error: error.message
             });
-            
-            // Add each enabled source as a scraper
-            enabledSources.forEach(source => {
-                // Skip if it's the demo scraper (which we already added)
-                if (source === 'demo') return;
+            apiStatus = { status: 'error', message: 'Could not connect to Scraper API', sources: [], last_run_times: {} };
+            progressData = { sources: {}, is_scraping: false };
+        }
+
+        // Get enabled sources from the fetched status
+        const enabledSources = apiStatus.sources || [];
+
+        // Fetch Article Stats directly from NewsPost DB
+        try {
+            const totalArticles = await NewsPost.countDocuments();
+            const oneDayAgo = new Date();
+            oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+            const articlesLast24h = await NewsPost.countDocuments({ createdAt: { $gte: oneDayAgo } });
+
+            stats.articles = {
+                total: totalArticles,
+                last24Hours: articlesLast24h
+            };
+        } catch (dbError) {
+            logger.error({ msg: 'Error fetching article stats from DB', error: dbError.message });
+        }
+
+        // Process each enabled scraper: Fetch counts, status, and calculate next run
+        if (enabledSources.length > 0) {
+            const scraperPromises = enabledSources.map(async (source) => {
+                let articles_count = 0;
+                try {
+                    // Use regex matching on sourceUrl instead of exact source matching
+                    let urlPattern;
+                    switch(source.toLowerCase()) {
+                        case 'mihan_blockchain':
+                        case 'mihanblockchain':
+                            urlPattern = /mihanblockchain\.com/i;
+                            break;
+                        case 'arzdigital':
+                            urlPattern = /arzdigital\.com/i;
+                            break;
+                        default:
+                            urlPattern = new RegExp(source, 'i');
+                    }
+                    articles_count = await NewsPost.countDocuments({ sourceUrl: { $regex: urlPattern } });
+                } catch (dbCountError) {
+                    logger.error({ msg: `Error counting articles for ${source}`, error: dbCountError.message });
+                }
+
+                // Get Status from Progress Data
+                const sourceProgress = progressData.sources ? progressData.sources[source] : null;
+                let currentStatus = 'idle'; // Default
+                if (sourceProgress) {
+                    currentStatus = sourceProgress.status || 'idle'; 
+                }
+                 // Consider overall scraping status if source specific is missing but API says scraping
+                 else if (progressData.is_scraping) {
+                    // We don't know *which* is running, but something is. Avoid marking all as idle.
+                    // Could mark as 'unknown' or leave 'idle' - leaving idle for now.
+                 }
+
+                // Get Last Run & Calculate Next Run
+                let last_run = apiStatus.last_run_times[source] || null;
+                let next_run_time = null;
+                const twoHours = 2 * 60 * 60 * 1000;
+
+                // *** SIMULATION (Remove when API provides real data) ***
+                if (!last_run) { 
+                    // Add simulation for both scrapers
+                    if (source === 'mihan_blockchain') {
+                        last_run = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+                    } else if (source === 'arzdigital') {
+                        last_run = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+                    }
+                }
+                // *** END SIMULATION ***
                 
-                scrapers.push({
+                if (last_run) {
+                    const lastRunDate = new Date(last_run);
+                    next_run_time = new Date(lastRunDate.getTime() + twoHours);
+                    if (!latestLastRun || lastRunDate > latestLastRun) {
+                        latestLastRun = lastRunDate;
+                    }
+                }
+
+                return {
                     id: source,
                     name: source.charAt(0).toUpperCase() + source.slice(1).replace(/_/g, ' '),
                     description: `Scraper for ${source} news source`,
                     website_name: `${source.charAt(0).toUpperCase() + source.slice(1).replace(/_/g, ' ')} News`,
                     website_url: getWebsiteUrl(source),
-                    status: 'idle',
-                    schedule: null,
-                    last_run: null,
-                    articles_count: 0
-                });
+                    status: currentStatus, // Use status from progress data
+                    last_run: last_run,
+                    next_run_time: next_run_time,
+                    articles_count: articles_count
+                };
             });
-        } catch (error) {
-            logger.error({
-                msg: 'Error fetching scraper data',
-                error: error.message
-            });
-            // Continue with default values
+            scrapers = await Promise.all(scraperPromises);
         }
 
-        // Generate CSRF token if function is available
+        // Update scraper stats (use the fetched statuses)
+        stats.scrapers = {
+            active: scrapers.filter(s => s.status === 'running').length,
+            total: scrapers.length
+        };
+
+        // Calculate overall next run for the card
+        let overallNextRunTime = null;
+        if (latestLastRun) {
+            overallNextRunTime = new Date(latestLastRun.getTime() + 2 * 60 * 60 * 1000);
+        }
+
+        // Generate CSRF token
         const csrfToken = req.csrfToken ? req.csrfToken() : null;
         
-        // Debug the CSRF token
-        logger.info({
-            msg: 'Rendering scraper dashboard',
-            has_csrf_token: !!csrfToken
+        res.render('dashboard/scraper', {
+            title: 'Scraper Dashboard', active: 'scraper', apiStatus, stats, scrapers,
+            overallNextRunTime, scraperApiUrl: SCRAPER_API_URL, csrfToken,
+            messages: { error: req.flash('error'), success: req.flash('success'), info: req.flash('info') }
         });
 
-        res.render('dashboard/scraper', {
-            title: 'Scraper Dashboard',
-            active: 'scraper',
-            apiStatus,
-            stats,
-            scrapers,
-            scraperApiUrl: SCRAPER_API_URL,
-            csrfToken,
-            messages: {
-                error: req.flash('error'),
-                success: req.flash('success'),
-                info: req.flash('info')
-            }
-        });
     } catch (error) {
-        logger.error({
-            msg: 'Failed to load scraper dashboard',
-            error: error.message
-        });
-        
+        logger.error({ msg: 'Failed to load scraper dashboard', error: error.message });
         req.flash('error', `Failed to load scraper dashboard: ${error.message}`);
         res.render('dashboard/scraper', {
-            title: 'Scraper Dashboard',
-            active: 'scraper',
-            apiStatus: { status: 'error', message: 'Failed to connect to scraper API' },
-            stats: {
-                articles: {
-                    total: 0,
-                    last24Hours: 0
-                },
-                scrapers: {
-                    active: 0,
-                    total: 0
-                }
-            },
-            scrapers: [{
-                id: 'demo',
-                name: 'Demo Scraper',
-                website_name: 'Demo News Site',
-                website_url: getWebsiteUrl('demo'),
-                status: 'idle',
-                schedule: null,
-                last_run: null,
-                articles_count: 0
-            }],
-            scraperApiUrl: SCRAPER_API_URL,
-            csrfToken: req.csrfToken ? req.csrfToken() : null,
-            messages: {
-                error: req.flash('error'),
-                success: req.flash('success'),
-                info: req.flash('info')
-            }
+            title: 'Scraper Dashboard', active: 'scraper',
+            apiStatus: { status: 'error', message: 'Error loading dashboard' },
+            stats: { articles: { total: 0, last24Hours: 0 }, scrapers: { active: 0, total: 0 } },
+            scrapers: [], overallNextRunTime: null,
+            scraperApiUrl: SCRAPER_API_URL, csrfToken: req.csrfToken ? req.csrfToken() : null,
+            messages: { error: req.flash('error'), success: req.flash('success'), info: req.flash('info') }
         });
     }
 });

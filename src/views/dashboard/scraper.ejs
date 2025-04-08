@@ -1,115 +1,103 @@
 <!-- Scraper Dashboard -->
-<div class="container-fluid px-4">
-    <h1 class="mt-4">News Scraper Dashboard</h1>
-    <ol class="breadcrumb mb-4">
-        <li class="breadcrumb-item"><a href="/dashboard">Dashboard</a></li>
-        <li class="breadcrumb-item active">News Scraper</li>
-    </ol>
-    
-    <!-- Status Card -->
-    <div class="row">
-        <div class="col-xl-12">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <i class="fas fa-server me-1"></i>
-                    Scraper API Status
-                </div>
-                <div class="card-body">
-                    <!-- Debug CSRF token -->
-                    <% if (typeof csrfToken !== 'undefined') { %>
-                        <!-- CSRF token is defined -->
-                    <% } else { %>
-                        <div class="alert alert-danger">
-                            <i class="fas fa-exclamation-circle me-2"></i> CSRF token is not defined
-                        </div>
-                    <% } %>
-                    
-                    <% if (apiStatus && apiStatus.status === 'running') { %>
-                        <div class="alert alert-success">
-                            <i class="fas fa-check-circle me-2"></i> Scraper API is running
-                            <div class="mt-2"><small>API URL: <%= scraperApiUrl %></small></div>
-                        </div>
-                    <% } else { %>
-                        <div class="alert alert-danger">
-                            <i class="fas fa-exclamation-circle me-2"></i> Scraper API is not available
-                            <div class="mt-2"><small>Error: <%= apiStatus && apiStatus.message ? apiStatus.message : 'Failed to connect to the scraper API' %></small></div>
-                            <div class="mt-2"><small>API URL: <%= scraperApiUrl %></small></div>
-                        </div>
-                    <% } %>
-                </div>
-            </div>
+<div class="container-fluid p-0">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">News Scraper Dashboard</h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">Dashboard</a></li>
+                    <li class="breadcrumb-item active">News Scraper</li>
+                </ol>
+            </nav>
+        </div>
+        <div>
+            <button class="btn btn-sm btn-primary" id="refreshStatus">
+                <i class="fas fa-sync-alt me-1"></i> Refresh Status
+            </button>
         </div>
     </div>
     
     <!-- Stats Cards -->
-    <div class="row">
-        <div class="col-xl-3 col-md-6">
-            <div class="card bg-primary text-white mb-4">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="small">Total Articles</div>
-                            <div class="h2"><%= stats && stats.articles ? stats.articles.total : 'N/A' %></div>
-                        </div>
-                        <i class="fas fa-newspaper fa-2x opacity-50"></i>
+    <div class="row mb-4">
+        <!-- Total Articles Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stats-card bg-primary text-white h-100">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="small text-white-50">Total Articles (DB)</div>
+                        <div class="h1 mb-0 fw-bold"><%= stats && stats.articles ? stats.articles.total : '0' %></div>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-database"></i>
                     </div>
                 </div>
                 <div class="card-footer d-flex align-items-center justify-content-between">
-                    <a class="small text-white stretched-link" href="/dashboard/news-posts">View Articles</a>
+                    <a class="small text-white stretched-link text-decoration-none" href="/dashboard/news-posts">View All Articles</a>
                     <div class="small text-white"><i class="fas fa-angle-right"></i></div>
                 </div>
             </div>
         </div>
         
-        <div class="col-xl-3 col-md-6">
-            <div class="card bg-success text-white mb-4">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="small">Articles Last 24h</div>
-                            <div class="h2"><%= stats && stats.articles ? stats.articles.last24Hours : 'N/A' %></div>
-                        </div>
-                        <i class="fas fa-clock fa-2x opacity-50"></i>
+        <!-- Articles Last 24h Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stats-card bg-success text-white h-100">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="small text-white-50">Articles Last 24h (DB)</div>
+                        <div class="h1 mb-0 fw-bold"><%= stats && stats.articles ? stats.articles.last24Hours : '0' %></div>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-clock"></i>
                     </div>
                 </div>
                 <div class="card-footer d-flex align-items-center justify-content-between">
-                    <a class="small text-white stretched-link" href="#">Recent Articles</a>
+                    <a class="small text-white stretched-link text-decoration-none" href="/dashboard/news-posts">View Recent Articles</a>
                     <div class="small text-white"><i class="fas fa-angle-right"></i></div>
                 </div>
             </div>
         </div>
         
-        <div class="col-xl-3 col-md-6">
-            <div class="card bg-warning text-white mb-4">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="small">Active Scrapers</div>
-                            <div class="h2"><%= stats && stats.scrapers ? stats.scrapers.active : 'N/A' %></div>
-                        </div>
-                        <i class="fas fa-robot fa-2x opacity-50"></i>
+        <!-- Active Scrapers Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stats-card bg-warning text-white h-100">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="small text-white-50">Active Scrapers</div>
+                        <div class="h1 mb-0 fw-bold"><%= stats && stats.scrapers ? stats.scrapers.active : '0' %></div>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-robot <%= stats && stats.scrapers && stats.scrapers.active > 0 ? 'fa-spin' : '' %>"></i>
                     </div>
                 </div>
                 <div class="card-footer d-flex align-items-center justify-content-between">
-                    <span class="small text-white stretched-link">Running Now</span>
+                    <span class="small text-white stretched-link"><%= stats && stats.scrapers ? stats.scrapers.total : '0' %> Total Scrapers</span>
                     <div class="small text-white"><i class="fas fa-angle-down"></i></div>
                 </div>
             </div>
         </div>
         
-        <div class="col-xl-3 col-md-6">
-            <div class="card bg-info text-white mb-4">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="small">Total Scrapers</div>
-                            <div class="h2"><%= stats && stats.scrapers ? stats.scrapers.total : 'N/A' %></div>
-                        </div>
-                        <i class="fas fa-cog fa-2x opacity-50"></i>
+        <!-- Next Run Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stats-card bg-info text-white h-100">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="small text-white-50">Next Scheduled Run</div>
+                        <% if (overallNextRunTime) { %>
+                            <div class="h3 mb-0 fw-bold" title="<%= overallNextRunTime.toLocaleString() %>">
+                                <%= overallNextRunTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) %>
+                            </div>
+                            <div class="small text-white-50">Approx. in <%= Math.round((overallNextRunTime.getTime() - Date.now()) / 60000) %> min</div>
+                        <% } else { %>
+                            <div class="h3 mb-0 fw-bold">N/A</div>
+                            <div class="small text-white-50">No runs scheduled</div>
+                        <% } %>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-calendar-alt"></i>
                     </div>
                 </div>
                 <div class="card-footer d-flex align-items-center justify-content-between">
-                    <span class="small text-white stretched-link">Configured</span>
+                    <span class="small text-white stretched-link">Runs every <%= process.env.SCHEDULER_INTERVAL_HOURS || 2 %> hours</span>
                     <div class="small text-white"><i class="fas fa-angle-down"></i></div>
                 </div>
             </div>
@@ -118,135 +106,123 @@
 
     <!-- Scrapers Table -->
     <div class="card mb-4">
-        <div class="card-header">
-            <i class="fas fa-robot me-1"></i>
-            Available Scrapers
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+                <i class="fas fa-robot me-1"></i>
+                Available Scrapers
+            </div>
+            <div>
+                <button class="btn btn-sm btn-outline-secondary" id="toggleScraperDetails">
+                    <i class="fas fa-cog me-1"></i> Show Details
+                </button>
+            </div>
         </div>
-        <div class="card-body">
+        <div class="card-body p-0">
             <% if (scrapers && scrapers.length > 0) { %>
                 <div class="table-responsive">
-                    <table class="table table-bordered" id="scrapersTable" width="100%" cellspacing="0">
-                        <thead>
+                    <table class="table table-hover mb-0" id="scrapersTable">
+                        <thead class="table-light">
                             <tr>
-                                <th>ID</th>
-                                <th>Name</th>
-                                <th>Website</th>
-                                <th>Status</th>
-                                <th>Schedule</th>
-                                <th>Last Run</th>
-                                <th>Articles</th>
-                                <th>Actions</th>
+                                <th class="border-0">Name</th>
+                                <th class="border-0">Status</th>
+                                <th class="border-0 text-center">Last Run</th>
+                                <th class="border-0 text-center">Next Run</th>
+                                <th class="border-0 text-center">Articles (DB)</th>
+                                <th class="border-0 text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             <% scrapers.forEach(scraper => { %>
-                                <tr>
-                                    <td><%= scraper.id %></td>
-                                    <td><%= scraper.name %></td>
+                                <tr class="scraper-row" data-scraper-id="<%= scraper.id %>" data-scraper-name="<%= scraper.name.toLowerCase() %>">
                                     <td>
-                                        <% if (scraper.website_url) { %>
-                                            <a href="<%= scraper.website_url %>" target="_blank"><%= scraper.website_name || scraper.website_url %> <i class="fas fa-external-link-alt fa-xs"></i></a>
-                                        <% } else { %>
-                                            <%= scraper.website_name || 'N/A' %>
-                                        <% } %>
+                                        <div class="d-flex align-items-center">
+                                            <div class="scraper-icon me-3 text-primary">
+                                                <i class="fas fa-robot <%= scraper.status === 'running' ? 'fa-bounce' : '' %>"></i>
+                                            </div>
+                                            <div>
+                                                <div class="fw-bold"><%= scraper.name %></div>
+                                                <% if (scraper.website_url) { %>
+                                                    <div class="small text-muted">
+                                                        <a href="<%= scraper.website_url %>" target="_blank" class="text-decoration-none">
+                                                            <%= scraper.website_name || scraper.website_url %>
+                                                            <i class="fas fa-external-link-alt fa-xs ms-1"></i>
+                                                        </a>
+                                                    </div>
+                                                <% } %>
+                                            </div>
+                                        </div>
                                     </td>
                                     <td>
                                         <% if (scraper.status === 'running') { %>
-                                            <span class="badge bg-success">Running</span>
+                                            <span class="badge bg-success rounded-pill">
+                                                <i class="fas fa-sync-alt fa-spin me-1"></i> Running
+                                            </span>
                                         <% } else if (scraper.status === 'idle') { %>
-                                            <span class="badge bg-secondary">Idle</span>
+                                            <span class="badge bg-secondary rounded-pill">Idle</span>
                                         <% } else if (scraper.status === 'error') { %>
-                                            <span class="badge bg-danger">Error</span>
+                                            <span class="badge bg-danger rounded-pill">Error</span>
                                         <% } else { %>
-                                            <span class="badge bg-info"><%= scraper.status %></span>
+                                            <span class="badge bg-info rounded-pill"><%= scraper.status %></span>
                                         <% } %>
                                     </td>
-                                    <td>
-                                        <% if (scraper.schedule) { %>
-                                            <code><%= scraper.schedule %></code>
-                                        <% } else { %>
-                                            <span class="text-muted">Not scheduled</span>
-                                        <% } %>
+                                    <td class="text-center last-run-cell">
+                                        <div class="d-flex flex-column align-items-center last-run-info">
+                                            <% if (scraper.last_run) { %>
+                                                <div class="fw-semibold" title="<%= new Date(scraper.last_run).toLocaleString() %>">
+                                                    <%= new Date(scraper.last_run).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) %>
+                                                </div>
+                                                <div class="small text-muted"><%= new Date(scraper.last_run).toLocaleDateString() %></div>
+                                            <% } else { %>
+                                                <span class="text-muted">Never</span>
+                                            <% } %>
+                                        </div>
+                                        <div class="spinner-border spinner-border-sm text-primary d-none loading-spinner" role="status">
+                                            <span class="visually-hidden">Loading...</span>
+                                        </div>
                                     </td>
-                                    <td>
-                                        <% if (scraper.last_run) { %>
-                                            <%= new Date(scraper.last_run).toLocaleString() %>
-                                        <% } else { %>
-                                            <span class="text-muted">Never</span>
-                                        <% } %>
+                                    <td class="text-center next-run-cell">
+                                        <div class="d-flex flex-column align-items-center next-run-info">
+                                            <% if (scraper.next_run_time) { %>
+                                                <div class="fw-semibold" title="<%= scraper.next_run_time.toLocaleString() %>">
+                                                    <%= scraper.next_run_time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) %>
+                                                </div>
+                                                <div class="small text-muted">
+                                                    in <%= Math.round((scraper.next_run_time.getTime() - Date.now()) / 60000) %> min
+                                                </div>
+                                            <% } else { %>
+                                                <span class="text-muted">N/A</span>
+                                            <% } %>
+                                        </div>
+                                        <div class="spinner-border spinner-border-sm text-primary d-none loading-spinner" role="status">
+                                            <span class="visually-hidden">Loading...</span>
+                                        </div>
                                     </td>
-                                    <td><%= scraper.articles_count || 0 %></td>
-                                    <td>
-                                        <div class="d-flex">
+                                    <td class="text-center articles-cell">
+                                        <div class="article-count">
+                                            <span class="fw-bold fs-5" data-scraper-name="<%= scraper.name.toLowerCase() %>">
+                                                <div class="spinner-border spinner-border-sm text-primary loading-spinner" role="status">
+                                                    <span class="visually-hidden">Loading...</span>
+                                                </div>
+                                                <span class="count-value">0</span>
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="d-flex justify-content-center">
                                             <% if (scraper.status === 'running') { %>
                                                 <form action="/dashboard/scraper/<%= scraper.id %>/stop" method="POST" class="me-2">
                                                     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                                                    <button type="submit" class="btn btn-sm btn-warning">
-                                                        <i class="fas fa-stop"></i> Stop
+                                                    <button type="submit" class="btn btn-sm btn-warning stop-btn">
+                                                        <i class="fas fa-stop me-1"></i> Stop
                                                     </button>
                                                 </form>
                                             <% } else { %>
                                                 <form action="/dashboard/scraper/<%= scraper.id %>/run" method="POST" class="me-2">
                                                     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                                                    <button type="submit" class="btn btn-sm btn-success">
-                                                        <i class="fas fa-play"></i> Run
+                                                    <button type="submit" class="btn btn-sm btn-success run-btn">
+                                                        <i class="fas fa-play me-1"></i> Run
                                                     </button>
                                                 </form>
-                                            <% } %>
-                                            
-                                            <!-- Add Manual Scraping button -->
-                                            <a href="/dashboard/scraper/<%= scraper.id %>/manual" class="btn btn-sm btn-info me-2">
-                                                <i class="fas fa-code"></i> Manual Scrape
-                                            </a>
-                                            
-                                            <% if (scraper.schedule) { %>
-                                                <form action="/dashboard/scraper/<%= scraper.id %>/unschedule" method="POST">
-                                                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                                                    <button type="submit" class="btn btn-sm btn-outline-danger">
-                                                        <i class="fas fa-calendar-times"></i> Unschedule
-                                                    </button>
-                                                </form>
-                                            <% } else { %>
-                                                <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#scheduleModal<%= scraper.id %>">
-                                                    <i class="fas fa-calendar-plus"></i> Schedule
-                                                </button>
-                                                
-                                                <!-- Schedule Modal -->
-                                                <div class="modal fade" id="scheduleModal<%= scraper.id %>" tabindex="-1" aria-labelledby="scheduleModalLabel<%= scraper.id %>" aria-hidden="true">
-                                                    <div class="modal-dialog">
-                                                        <div class="modal-content">
-                                                            <div class="modal-header">
-                                                                <h5 class="modal-title" id="scheduleModalLabel<%= scraper.id %>">Schedule Scraper: <%= scraper.name %></h5>
-                                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                            </div>
-                                                            <form action="/dashboard/scraper/<%= scraper.id %>/schedule" method="POST">
-                                                                <div class="modal-body">
-                                                                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                                                                    <div class="mb-3">
-                                                                        <label for="schedule" class="form-label">Schedule (Cron Expression)</label>
-                                                                        <input type="text" class="form-control" id="schedule" name="schedule" placeholder="0 */6 * * *" required>
-                                                                        <div class="form-text">
-                                                                            Example: <code>0 */6 * * *</code> (Every 6 hours)
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="alert alert-info">
-                                                                        <h6>Common Cron Expressions:</h6>
-                                                                        <ul class="mb-0">
-                                                                            <li><code>0 */6 * * *</code> - Every 6 hours</li>
-                                                                            <li><code>0 0 * * *</code> - Once a day (midnight)</li>
-                                                                            <li><code>0 0 * * 1-5</code> - Weekdays at midnight</li>
-                                                                            <li><code>0 */2 * * *</code> - Every 2 hours</li>
-                                                                        </ul>
-                                                                    </div>
-                                                                </div>
-                                                                <div class="modal-footer">
-                                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                                    <button type="submit" class="btn btn-primary">Schedule</button>
-                                                                </div>
-                                                            </form>
-                                                        </div>
-                                                    </div>
-                                                </div>
                                             <% } %>
                                         </div>
                                     </td>
@@ -256,21 +232,90 @@
                     </table>
                 </div>
             <% } else { %>
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle me-2"></i>
-                    No scrapers available. Check if the scraper API is running and properly configured.
+                <div class="alert alert-info m-3">
+                    <i class="fas fa-info-circle me-2"></i> No scrapers configured or API unavailable.
                 </div>
             <% } %>
         </div>
     </div>
 </div>
 
-<!-- Initialize DataTable for scrapers -->
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Initialize DataTable if available
         if (typeof $.fn.DataTable !== 'undefined') {
             $('#scrapersTable').DataTable({
-                order: [[5, 'desc']] // Sort by last run column by default
+                ordering: false,
+                paging: false,
+                searching: false,
+                info: false
+            });
+        }
+        
+        // Function to fetch article counts
+        function fetchArticleCounts() {
+            // Get all scraper rows
+            const scraperRows = document.querySelectorAll('.scraper-row');
+            
+            // Loop through each scraper
+            scraperRows.forEach(row => {
+                const scraperId = row.getAttribute('data-scraper-id');
+                const scraperName = row.getAttribute('data-scraper-name');
+                let sourceParam = '';
+                
+                // Map scraper name to source parameter
+                if (scraperName === 'mihan blockchain') {
+                    sourceParam = 'mihanblockchain';
+                } else if (scraperName === 'arzdigital') {
+                    sourceParam = 'arzdigital';
+                } else {
+                    sourceParam = scraperName;
+                }
+                
+                // Show loading spinner
+                const articleCell = row.querySelector('.articles-cell .article-count span');
+                if (articleCell) {
+                    articleCell.querySelector('.loading-spinner').classList.remove('d-none');
+                    articleCell.querySelector('.count-value').textContent = '';
+                }
+                
+                // Fetch count from API
+                fetch(`/api/v1/news-posts/count?source=${sourceParam}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        // Update the count
+                        if (articleCell) {
+                            articleCell.querySelector('.loading-spinner').classList.add('d-none');
+                            articleCell.querySelector('.count-value').textContent = data.count || 0;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching article count:', error);
+                        if (articleCell) {
+                            articleCell.querySelector('.loading-spinner').classList.add('d-none');
+                            articleCell.querySelector('.count-value').textContent = '0';
+                        }
+                    });
+            });
+        }
+        
+        // Fetch article counts on page load
+        fetchArticleCounts();
+        
+        // Refresh button
+        const refreshBtn = document.getElementById('refreshStatus');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', function() {
+                fetchArticleCounts();
+                // Add spinner to button
+                this.innerHTML = '<i class="fas fa-sync-alt fa-spin me-1"></i> Refreshing...';
+                this.disabled = true;
+                
+                // Reset button after 2 seconds
+                setTimeout(() => {
+                    this.innerHTML = '<i class="fas fa-sync-alt me-1"></i> Refresh Status';
+                    this.disabled = false;
+                }, 2000);
             });
         }
     });

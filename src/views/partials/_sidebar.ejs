@@ -1,0 +1,47 @@
+<nav class="sb-sidenav accordion sb-sidenav-dark" id="sidenavAccordion">
+    <div class="sb-sidenav-menu">
+        <div class="nav">
+            <div class="sb-sidenav-menu-heading">Core</div>
+            <a class="nav-link <%= active === 'dashboard' ? 'active' : '' %>" href="/dashboard">
+                <div class="sb-nav-link-icon"><i class="fas fa-tachometer-alt"></i></div>
+                Dashboard
+            </a>
+            <div class="sb-sidenav-menu-heading">Management</div>
+            <!-- API Keys Section -->
+            <a class="nav-link <%= active === 'api-keys' ? 'active' : '' %>" href="/dashboard/api-keys">
+                <div class="sb-nav-link-icon"><i class="fas fa-key"></i></div>
+                API Keys
+            </a>
+            <!-- News Posts Section -->
+            <a class="nav-link <%= active === 'news-posts' ? 'active' : '' %>" href="/dashboard/news-posts">
+                <div class="sb-nav-link-icon"><i class="fas fa-newspaper"></i></div>
+                News Posts
+            </a>
+            <!-- News Scraper Section -->
+            <a class="nav-link <%= active === 'scraper' ? 'active' : '' %>" href="/dashboard/scraper">
+                <div class="sb-nav-link-icon"><i class="fas fa-robot"></i></div>
+                News Scraper
+            </a>
+            
+            <!-- User Management (Admin Only) -->
+            <% if (user && user.role === 'admin') { %>
+                <a class="nav-link <%= active === 'users' ? 'active' : '' %>" href="/dashboard/users">
+                    <div class="sb-nav-link-icon"><i class="fas fa-users"></i></div>
+                    Users
+                </a>
+            <% } %>
+
+            <!-- Settings (Admin Only) -->
+             <% if (user && user.role === 'admin') { %>
+                <a class="nav-link <%= active === 'settings' ? 'active' : '' %>" href="/dashboard/settings">
+                    <div class="sb-nav-link-icon"><i class="fas fa-cog"></i></div>
+                    Settings
+                </a>
+            <% } %>
+        </div>
+    </div>
+    <div class="sb-sidenav-footer">
+        <div class="small">Logged in as:</div>
+        <%= user ? user.name : 'Guest' %> (<%= user ? user.role : 'N/A' %>)
+    </div>
+</nav> 

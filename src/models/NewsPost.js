@@ -29,16 +29,7 @@ const Schema = mongoose.Schema;
  *         imagesUrl:
  *           type: array
  *           items:
- *             type: object
- *             properties:
- *               id:
- *                 type: string
- *               url:
- *                 type: string
- *               caption:
- *                 type: string
- *               type:
- *                 type: string
+ *             type: string
  *           description: Array of image objects related to the post
  *         content:
  *           type: array
@@ -71,13 +62,20 @@ const newsPostSchema = new Schema(
       trim: true,
     },
     content: {
-      type: [String],
+      type: Map, // Use Map for objects with arbitrary keys
+      of: String, // Specify that the values in the map must be strings
       required: [true, 'A news post must have content'],
       validate: {
         validator: function(v) {
-          return Array.isArray(v) && v.length > 0;
+          // 'v' will be a Map instance here.
+          // Check if it's a Map and has at least one key-value pair.
+          // Mongoose Maps have a 'size' property.
+          return v instanceof Map && v.size > 0;
+          // Alternatively, a less strict check if Mongoose passes a plain object during validation sometimes:
+          // return v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length > 0;
         },
-        message: 'Content must be a non-empty array of strings'
+        // Update the error message to reflect the expected object structure
+        message: 'Content object must contain at least one key-value pair'
       }
     },
     status: {
@@ -97,25 +95,25 @@ const newsPostSchema = new Schema(
       type: String,
       trim: true,
     },
-    imageThumbnail: {
-      type: String,
-      trim: true,
-    },
     imagesUrl: {
-      type: mongoose.Schema.Types.Mixed,
-      default: [],
-      set: function(v) {
-        // Handle different formats - string, array of strings, or array of objects
-        if (typeof v === 'string') {
-          try {
-            return JSON.parse(v);
-          } catch (e) {
-            console.log('Error parsing imagesUrl string:', e);
-            return [];
-          }
+      type: [{
+        url: {
+          type: String,
+          required: true
+        },
+        id: {
+          type: String,
+          required: true
+        },
+        caption: {
+          type: String
+        },
+        type: {
+          type: String,
+          default: 'figure'
         }
-        return v;
-      }
+      }],
+      default: [],
     },
     tags: {
       type: [String],
@@ -145,32 +143,7 @@ newsPostSchema.index({ tags: 1 });
 newsPostSchema.pre('save', function(next) {
   // Handle imagesUrl if it's a string or contains strings
   if (this.imagesUrl) {
-    if (typeof this.imagesUrl === 'string') {
-      try {
-        this.imagesUrl = JSON.parse(this.imagesUrl);
-      } catch (e) {
-        // If parsing fails, set to empty array to avoid validation errors
-        this.imagesUrl = [];
-      }
-    } else if (Array.isArray(this.imagesUrl)) {
-      // Ensure each item is an object with the expected structure
-      this.imagesUrl = this.imagesUrl.map(item => {
-        if (typeof item === 'string') {
-          try {
-            return JSON.parse(item);
-          } catch (e) {
-            // Return a default object if parsing fails
-            return {
-              id: 'default',
-              url: '',
-              caption: '',
-              type: 'figure'
-            };
-          }
-        }
-        return item;
-      });
-    }
+    // No pre-save logic needed for simple string array
   }
   next();
 });
