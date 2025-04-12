@@ -34,6 +34,7 @@ const dashboardRoutes = require('./routes/dashboardRoutes');
 const newsPostRoutes = require('./routes/newsPostRoutes');
 const scraperRoutes = require('./routes/scraperRoutes');
 const { router: authRoutes } = require('./routes/authRoutes');
+const rssPostRoutes = require('./routes/rssPostRoutes');
 
 // Create Express app
 const app = express();
@@ -257,6 +258,7 @@ app.use('/api/api-keys', protect, apiKeyRoutes);
 app.use('/api/dashboard', protect, dashboardRoutes);
 app.use('/api/v1/news-posts', newsPostRoutes);
 app.use('/api/scrapers', protect, scraperRoutes);
+app.use('/api/v1/rss-posts', rssPostRoutes);
 
 // 404 handler
 app.use(notFound);

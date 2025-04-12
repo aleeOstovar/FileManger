@@ -61,6 +61,20 @@ const apiKeySchema = new mongoose.Schema(
     expiresAt: {
       type: Date,
       default: null
+    },
+    lastUsed: {
+      timestamp: {
+        type: Date,
+        default: null
+      },
+      ip: {
+        type: String,
+        default: null
+      },
+      userAgent: {
+        type: String,
+        default: null
+      }
     }
   },
   {
@@ -120,6 +134,26 @@ apiKeySchema.statics.verifyKey = async function(key) {
  */
 apiKeySchema.methods.hasPermission = function(permission) {
   return this.permissions.includes(permission) || this.permissions.includes('admin');
+};
+
+/**
+ * Track API key usage
+ * @param {Object} options - Usage details
+ * @param {string} options.ip - IP address of the client
+ * @param {string} options.userAgent - User agent of the client
+ * @returns {Promise<void>}
+ */
+apiKeySchema.methods.trackUsage = async function(options = {}) {
+  // Update lastUsed information
+  this.lastUsed = {
+    timestamp: new Date(),
+    ip: options.ip || 'Unknown',
+    userAgent: options.userAgent || 'Unknown'
+  };
+  
+  // Save the document with usage tracking
+  // Use { new: true } to return the updated document
+  await this.save();
 };
 
 const ApiKey = mongoose.model('ApiKey', apiKeySchema);

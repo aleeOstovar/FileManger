@@ -1,0 +1,61 @@
+<!-- No includes, just the modal content -->
+<div class="modal fade show" id="apiKeyModal" tabindex="-1" aria-labelledby="apiKeyModalLabel" style="display: block; background-color: rgba(0,0,0,0.5);">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="apiKeyModalLabel">API Key Created Successfully</h5>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-warning" role="alert">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>
+          <strong>Important:</strong> This API key will only be shown once. Please copy it now.
+        </div>
+        
+        <div class="input-group mb-3">
+          <input type="text" class="form-control form-control-lg bg-light" id="apiKeyValue" value="<%= apiKeyValue %>" readonly>
+          <button class="btn btn-outline-primary" type="button" id="copyButton" onclick="copyApiKey()">
+            <i class="bi bi-clipboard"></i> Copy
+          </button>
+        </div>
+        
+        <div id="copyConfirmation" class="alert alert-success d-none">
+          API key copied to clipboard!
+        </div>
+      </div>
+      <div class="modal-footer">
+        <a href="/dashboard/api-keys/<%= apiKeyId %>" class="btn btn-primary">
+          Continue to API Key Details
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Auto-select the API key value on page load
+  window.onload = function() {
+    const apiKeyInput = document.getElementById('apiKeyValue');
+    apiKeyInput.select();
+  };
+
+  function copyApiKey() {
+    const apiKeyInput = document.getElementById('apiKeyValue');
+    apiKeyInput.select();
+    apiKeyInput.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(apiKeyInput.value);
+    
+    const copyButton = document.getElementById('copyButton');
+    const copyConfirmation = document.getElementById('copyConfirmation');
+    
+    // Show confirmation
+    copyConfirmation.classList.remove('d-none');
+    
+    // Update button
+    copyButton.innerHTML = '<i class="bi bi-check"></i> Copied!';
+    
+    // Reset button after 2 seconds
+    setTimeout(() => {
+      copyButton.innerHTML = '<i class="bi bi-clipboard"></i> Copy';
+    }, 2000);
+  }
+</script> 

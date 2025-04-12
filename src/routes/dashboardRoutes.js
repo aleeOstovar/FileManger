@@ -64,6 +64,10 @@ router.get('/logout', authController.logout);
  */
 router.use(authController.protect);
 
+// Profile page
+router.get('/profile', dashboardController.getProfile);
+router.post('/profile/update', csrfProtection, dashboardController.updateProfile);
+
 // Dashboard home
 router.get('/', dashboardController.getDashboard);
 
@@ -123,10 +127,10 @@ router.post('/news-posts/:id/delete', csrfProtection, dashboardController.delete
  * User Management Routes - Admin only
  */
 if (dashboardController.getUsers) {
-  router.get('/users', authController.restrictTo('admin'), dashboardController.getUsers);
-  router.get('/users/create', csrfProtection, authController.restrictTo('admin'), dashboardController.getCreateUserForm);
-  router.post('/users/create', csrfProtection, authController.restrictTo('admin'), dashboardController.createUser);
-  router.post('/users/:id/toggle-status', authController.restrictTo('admin'), dashboardController.toggleUserStatus);
+  router.get('/users', authController.restrictTo('admin'), csrfProtection, dashboardController.getUsers);
+  router.get('/users/create', authController.restrictTo('admin'), csrfProtection, dashboardController.getCreateUserForm);
+  router.post('/users/create', authController.restrictTo('admin'), csrfProtection, dashboardController.createUser);
+  router.post('/users/:id/toggle-status', authController.restrictTo('admin'), csrfProtection, dashboardController.toggleUserStatus);
 }
 
 // Settings Routes - Admin only

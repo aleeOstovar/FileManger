@@ -15,35 +15,6 @@
   </div>
 </div>
 
-<% if (newKey) { %>
-  <div class="alert alert-success alert-dismissible fade show" role="alert">
-    <h4 class="alert-heading">API Key Created Successfully!</h4>
-    <p>Your new API key has been created. Please copy the key now as it will not be shown again.</p>
-    <div class="input-group mb-3">
-      <input type="text" class="form-control" id="apiKeyValue" value="<%= newKey %>" readonly>
-      <button class="btn btn-outline-secondary" type="button" id="copyButton" onclick="copyApiKey()">
-        <i class="bi bi-clipboard"></i> Copy
-      </button>
-    </div>
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-  </div>
-  
-  <script>
-    function copyApiKey() {
-      const apiKeyInput = document.getElementById('apiKeyValue');
-      apiKeyInput.select();
-      apiKeyInput.setSelectionRange(0, 99999);
-      navigator.clipboard.writeText(apiKeyInput.value);
-      
-      const copyButton = document.getElementById('copyButton');
-      copyButton.innerHTML = '<i class="bi bi-check"></i> Copied!';
-      setTimeout(() => {
-        copyButton.innerHTML = '<i class="bi bi-clipboard"></i> Copy';
-      }, 2000);
-    }
-  </script>
-<% } %>
-
 <div class="row">
   <div class="col-md-8">
     <div class="card mb-4">

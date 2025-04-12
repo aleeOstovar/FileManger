@@ -1,0 +1,163 @@
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">My Profile</h1>
+</div>
+
+<div class="row">
+  <div class="col-md-8">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="mb-0">Profile Information</h5>
+      </div>
+      <div class="card-body">
+        <form action="/dashboard/profile/update" method="POST">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          
+          <div class="mb-3">
+            <label for="name" class="form-label">Name</label>
+            <input 
+              type="text" 
+              class="form-control" 
+              id="name" 
+              name="name" 
+              value="<%= user.name %>" 
+              required
+            >
+          </div>
+          
+          <div class="mb-3">
+            <label for="email" class="form-label">Email</label>
+            <input 
+              type="email" 
+              class="form-control" 
+              id="email" 
+              name="email" 
+              value="<%= user.email %>" 
+              required
+            >
+          </div>
+          
+          <div class="mb-3">
+            <label for="role" class="form-label">Role</label>
+            <input 
+              type="text" 
+              class="form-control" 
+              id="role" 
+              value="<%= user.role.charAt(0).toUpperCase() + user.role.slice(1) %>" 
+              disabled
+            >
+            <div class="form-text">Your role cannot be changed. Contact an administrator if you need a role change.</div>
+          </div>
+          
+          <div class="mb-3">
+            <label for="createdAt" class="form-label">Member Since</label>
+            <input 
+              type="text" 
+              class="form-control" 
+              id="createdAt" 
+              value="<%= new Date(user.createdAt).toLocaleDateString() %>" 
+              disabled
+            >
+          </div>
+          
+          <button type="submit" class="btn btn-primary">Update Profile</button>
+        </form>
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">Change Password</h5>
+      </div>
+      <div class="card-body">
+        <form action="/dashboard/profile/update" method="POST">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          
+          <div class="mb-3">
+            <label for="currentPassword" class="form-label">Current Password</label>
+            <input 
+              type="password" 
+              class="form-control" 
+              id="currentPassword" 
+              name="currentPassword" 
+              placeholder="Enter your current password"
+              required
+            >
+          </div>
+          
+          <div class="mb-3">
+            <label for="newPassword" class="form-label">New Password</label>
+            <input 
+              type="password" 
+              class="form-control" 
+              id="newPassword" 
+              name="newPassword" 
+              placeholder="Enter your new password"
+              required
+            >
+          </div>
+          
+          <div class="mb-3">
+            <label for="confirmPassword" class="form-label">Confirm New Password</label>
+            <input 
+              type="password" 
+              class="form-control" 
+              id="confirmPassword" 
+              name="confirmPassword" 
+              placeholder="Confirm your new password"
+              required
+            >
+          </div>
+          
+          <button type="submit" class="btn btn-primary">Change Password</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-4">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="mb-0">Account Information</h5>
+      </div>
+      <div class="card-body">
+        <p><strong>User ID:</strong> <%= user._id %></p>
+        <p><strong>Status:</strong> 
+          <% if (user.active) { %>
+            <span class="badge bg-success">Active</span>
+          <% } else { %>
+            <span class="badge bg-danger">Inactive</span>
+          <% } %>
+        </p>
+        <p><strong>Last Login:</strong> 
+          <% if (user.lastLogin) { %>
+            <%= new Date(user.lastLogin).toLocaleString() %>
+          <% } else { %>
+            Never
+          <% } %>
+        </p>
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">Security Tips</h5>
+      </div>
+      <div class="card-body">
+        <ul class="list-unstyled">
+          <li class="mb-2">
+            <i class="bi bi-shield-lock text-primary me-2"></i>
+            Use a strong, unique password
+          </li>
+          <li class="mb-2">
+            <i class="bi bi-arrow-repeat text-primary me-2"></i>
+            Change your password regularly
+          </li>
+          <li>
+            <i class="bi bi-envelope-exclamation text-primary me-2"></i>
+            Keep your email address up to date
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div> 

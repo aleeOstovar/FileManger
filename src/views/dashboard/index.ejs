@@ -1,75 +1,935 @@
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-  <h1 class="h2">Dashboard</h1>
-</div>
+<div class="dashboard-container">
+  <div class="neon-header d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-4 pb-3 mb-4">
+    <h1 class="neon-text">Dashboard</h1>
+    <div class="glow-effect"></div>
+  </div>
 
-<div class="row">
-  <div class="col-md-6 col-lg-3 mb-4">
-    <div class="card h-100">
-      <div class="card-body">
-        <h5 class="card-title"><i class="bi bi-key text-primary"></i> API Keys</h5>
-        <p class="card-text display-4"><%= stats.activeApiKeys %></p>
-        <p class="card-text text-muted">Active API keys</p>
-      </div>
-      <div class="card-footer bg-white border-0">
-        <a href="/dashboard/api-keys" class="btn btn-sm btn-outline-primary">View all</a>
-        <% if (user.role === 'admin' || user.role === 'manager') { %>
-          <a href="/dashboard/api-keys/create" class="btn btn-sm btn-primary">Create new</a>
-        <% } %>
+  <!-- Summary Cards Row -->
+  <div class="row">
+    <!-- API Keys Card -->
+    <div class="col-md-6 col-lg-3 mb-4">
+      <div class="card neon-card">
+        <div class="card-body">
+          <div class="card-icon"><i class="bi bi-key"></i></div>
+          <h5 class="card-title">API Keys</h5>
+          <p class="card-text counter-value"><%= stats.activeApiKeys %></p>
+          <p class="card-text text-muted">Active API keys</p>
+        </div>
+        <div class="card-footer border-0">
+          <a href="/dashboard/api-keys" class="btn btn-sm btn-neon-primary">View all</a>
+          <% if (user.role === 'admin' || user.role === 'manager') { %>
+            <a href="/dashboard/api-keys/create" class="btn btn-sm btn-neon-secondary">Create new</a>
+          <% } %>
+        </div>
       </div>
     </div>
-  </div>
-  
-  <div class="col-md-6 col-lg-3 mb-4">
-    <div class="card h-100">
-      <div class="card-body">
-        <h5 class="card-title"><i class="bi bi-people text-success"></i> Users</h5>
-        <p class="card-text display-4"><%= stats.users %></p>
-        <p class="card-text text-muted">Dashboard users</p>
-      </div>
-      <div class="card-footer bg-white border-0">
-        <% if (user.role === 'admin') { %>
-          <a href="/dashboard/users" class="btn btn-sm btn-outline-success">Manage users</a>
-        <% } %>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="row mt-4">
-  <div class="col-12">
-    <div class="card">
-      <div class="card-header">
-        Quick Actions
-      </div>
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-6 col-lg-4 mb-3">
-            <div class="d-grid">
-              <a href="/dashboard/api-keys" class="btn btn-outline-primary">
-                <i class="bi bi-key"></i> Manage API Keys
-              </a>
-            </div>
-          </div>
-          
+    
+    <!-- Users Card -->
+    <div class="col-md-6 col-lg-3 mb-4">
+      <div class="card neon-card">
+        <div class="card-body">
+          <div class="card-icon"><i class="bi bi-people"></i></div>
+          <h5 class="card-title">Users</h5>
+          <p class="card-text counter-value"><%= stats.users %></p>
+          <p class="card-text text-muted">Dashboard users</p>
+        </div>
+        <div class="card-footer border-0">
           <% if (user.role === 'admin') { %>
+            <a href="/dashboard/users" class="btn btn-sm btn-neon-success">Manage users</a>
+          <% } %>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Total News Posts Card -->
+    <div class="col-md-6 col-lg-3 mb-4">
+      <div class="card neon-card">
+        <div class="card-body">
+          <div class="card-icon"><i class="bi bi-newspaper"></i></div>
+          <h5 class="card-title">News Posts</h5>
+          <p class="card-text counter-value"><%= stats.totalPosts %></p>
+          <p class="card-text text-muted">Total articles</p>
+        </div>
+        <div class="card-footer border-0">
+          <a href="/dashboard/news-posts" class="btn btn-sm btn-neon-info">View all</a>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Last 24 Hours Posts Card -->
+    <div class="col-md-6 col-lg-3 mb-4">
+      <div class="card neon-card">
+        <div class="card-body">
+          <div class="card-icon"><i class="bi bi-clock-history"></i></div>
+          <h5 class="card-title">Last 24h</h5>
+          <p class="card-text counter-value"><%= stats.postsLast24Hours %></p>
+          <p class="card-text text-muted">Recently published</p>
+        </div>
+        <div class="card-footer border-0">
+          <a href="/dashboard/news-posts?filter=recent" class="btn btn-sm btn-neon-warning">View recent</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Row -->
+  <div class="row mt-4">
+    <!-- Line Chart: Posts by Date -->
+    <div class="col-lg-8 mb-4">
+      <div class="card neon-card">
+        <div class="card-header neon-card-header">
+          <h5>News Posts by Date (Last 30 Days)</h5>
+        </div>
+        <div class="card-body">
+          <div id="postsByDateChart" class="chart-container"></div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Pie Chart: Posts by Source -->
+    <div class="col-md-6 col-lg-4 mb-4">
+      <div class="card neon-card">
+        <div class="card-header neon-card-header">
+          <h5>News Posts by Source</h5>
+        </div>
+        <div class="card-body">
+          <div id="postsBySourceChart" class="chart-container"></div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Bar Chart: Posts by Status -->
+    <div class="col-md-6 col-lg-4 mb-4">
+      <div class="card neon-card">
+        <div class="card-header neon-card-header">
+          <h5>News Posts by Status</h5>
+        </div>
+        <div class="card-body">
+          <div id="postsByStatusChart" class="chart-container"></div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Bar Chart: Top Tags -->
+    <div class="col-md-6 col-lg-8 mb-4">
+      <div class="card neon-card">
+        <div class="card-header neon-card-header">
+          <h5>Top Tags</h5>
+        </div>
+        <div class="card-body">
+          <div id="topTagsChart" class="chart-container"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="row mt-4">
+    <div class="col-12">
+      <div class="card neon-card">
+        <div class="card-header neon-card-header">
+          <h5>Quick Actions</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
             <div class="col-md-6 col-lg-4 mb-3">
               <div class="d-grid">
-                <a href="/dashboard/users" class="btn btn-outline-success">
-                  <i class="bi bi-people"></i> Manage Users
+                <a href="/dashboard/news-posts" class="btn btn-neon-action">
+                  <i class="bi bi-newspaper"></i> Manage News Posts
                 </a>
               </div>
             </div>
             
             <div class="col-md-6 col-lg-4 mb-3">
               <div class="d-grid">
-                <a href="/dashboard/settings" class="btn btn-outline-secondary">
-                  <i class="bi bi-gear"></i> System Settings
+                <a href="/dashboard/api-keys" class="btn btn-neon-action">
+                  <i class="bi bi-key"></i> Manage API Keys
                 </a>
               </div>
             </div>
-          <% } %>
+            
+            <% if (user.role === 'admin') { %>
+              <div class="col-md-6 col-lg-4 mb-3">
+                <div class="d-grid">
+                  <a href="/dashboard/users" class="btn btn-neon-action">
+                    <i class="bi bi-people"></i> Manage Users
+                  </a>
+                </div>
+              </div>
+              
+              <div class="col-md-6 col-lg-4 mb-3">
+                <div class="d-grid">
+                  <a href="/dashboard/settings" class="btn btn-neon-action">
+                    <i class="bi bi-gear"></i> System Settings
+                  </a>
+                </div>
+              </div>
+            <% } %>
+          </div>
         </div>
       </div>
     </div>
   </div>
-</div> 
+</div>
+
+<!-- CSS for Neon Theme -->
+<style>
+  :root {
+    --neon-primary: #4361ee;
+    --neon-secondary: #3a0ca3;
+    --neon-success: #06d6a0;
+    --neon-info: #4cc9f0;
+    --neon-warning: #f72585;
+    --neon-danger: #ef476f;
+    --neon-light-bg: #ffffff;
+    --neon-card-bg: rgba(255, 255, 255, 0.95);
+    --neon-text: #333333;
+    --neon-secondary-text: #666666;
+  }
+  
+  /* Light background */
+  body, html {
+    background-color: var(--neon-light-bg) !important;
+    background-image: none !important;
+    color: var(--neon-text) !important;
+  }
+  
+  .dashboard-container {
+    padding: 1rem;
+    position: relative;
+  }
+  
+  .neon-header {
+    position: relative;
+    border-bottom: 1px solid rgba(67, 97, 238, 0.3);
+  }
+  
+  .neon-text {
+    color: #333;
+    text-shadow: none;
+    font-weight: 600;
+    letter-spacing: 1px;
+  }
+  
+  .glow-effect {
+    position: absolute;
+    width: 100%;
+    height: 1px;
+    bottom: -1px;
+    background: linear-gradient(90deg, 
+      transparent 0%, 
+      rgba(67, 97, 238, 0.8) 50%, 
+      transparent 100%);
+    animation: glow 3s infinite;
+  }
+  
+  .neon-card {
+    background-color: var(--neon-card-bg) !important;
+    border: 1px solid rgba(67, 97, 238, 0.2);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+    overflow: hidden;
+  }
+  
+  .neon-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(67, 97, 238, 0.15);
+    border-color: rgba(67, 97, 238, 0.4);
+  }
+  
+  .neon-card-header {
+    background-color: rgba(245, 247, 250, 0.9) !important;
+    border-bottom: 1px solid rgba(67, 97, 238, 0.2);
+    color: #333 !important;
+    padding: 1rem;
+  }
+  
+  .neon-card-header h5 {
+    margin: 0;
+    font-weight: 600;
+  }
+  
+  .card-icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(45deg, var(--neon-primary), var(--neon-info));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    display: inline-block;
+  }
+  
+  .neon-card .card-body {
+    padding: 1.5rem;
+  }
+  
+  .neon-card .card-footer {
+    background-color: rgba(245, 247, 250, 0.5) !important;
+    padding: 1rem;
+  }
+  
+  .counter-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    background: linear-gradient(45deg, var(--neon-primary), var(--neon-secondary));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 0.5rem;
+  }
+  
+  .btn-neon-primary, .btn-neon-secondary, .btn-neon-success, 
+  .btn-neon-info, .btn-neon-warning, .btn-neon-action {
+    border: none;
+    border-radius: 30px;
+    padding: 0.375rem 1rem;
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+    transition: all 0.3s ease;
+    color: white;
+  }
+  
+  .btn-neon-primary {
+    background: linear-gradient(45deg, #4361ee, #3a0ca3);
+    box-shadow: 0 2px 10px rgba(67, 97, 238, 0.3);
+  }
+  
+  .btn-neon-secondary {
+    background: linear-gradient(45deg, #3a0ca3, #480ca8);
+    box-shadow: 0 2px 10px rgba(58, 12, 163, 0.3);
+  }
+  
+  .btn-neon-success {
+    background: linear-gradient(45deg, #06d6a0, #06a77d);
+    box-shadow: 0 2px 10px rgba(6, 214, 160, 0.3);
+  }
+  
+  .btn-neon-info {
+    background: linear-gradient(45deg, #4cc9f0, #4361ee);
+    box-shadow: 0 2px 10px rgba(76, 201, 240, 0.3);
+  }
+  
+  .btn-neon-warning {
+    background: linear-gradient(45deg, #f72585, #b5179e);
+    box-shadow: 0 2px 10px rgba(247, 37, 133, 0.3);
+  }
+  
+  .btn-neon-action {
+    background: rgba(67, 97, 238, 0.1);
+    border: 1px solid rgba(67, 97, 238, 0.3);
+    box-shadow: 0 2px 10px rgba(67, 97, 238, 0.1);
+    color: var(--neon-text);
+    transition: all 0.3s ease;
+  }
+  
+  .btn-neon-action:hover {
+    background: rgba(67, 97, 238, 0.2);
+    border-color: rgba(67, 97, 238, 0.5);
+    box-shadow: 0 4px 15px rgba(67, 97, 238, 0.2);
+    color: #333;
+  }
+  
+  .btn-neon-primary:hover, .btn-neon-secondary:hover, 
+  .btn-neon-success:hover, .btn-neon-info:hover, .btn-neon-warning:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(67, 97, 238, 0.4);
+  }
+  
+  .chart-container {
+    height: 300px;
+    width: 100%;
+    margin: 0 auto;
+    position: relative;
+  }
+  
+  /* Remove the loading text */
+  .chart-container::after {
+    content: '';
+    display: none;
+  }
+  
+  @keyframes glow {
+    0% { opacity: 0.4; width: 80%; }
+    50% { opacity: 1; width: 100%; }
+    100% { opacity: 0.4; width: 80%; }
+  }
+  
+  /* Override any conflicting styles from other stylesheets */
+  .container, .container-fluid, main, .content-wrapper {
+    background-color: var(--neon-light-bg) !important;
+  }
+</style>
+
+<!-- ApexCharts for advanced visualizations -->
+<script src="https://cdn.jsdelivr.net/npm/apexcharts@3.35.0/dist/apexcharts.min.js"></script>
+<!-- CountUp.js for animated counters -->
+<script src="https://cdn.jsdelivr.net/npm/countup.js@2.0.8/dist/countUp.min.js"></script>
+
+<!-- Initialize visualizations -->
+<script>
+  // Ensure the DOM is loaded before executing
+  document.addEventListener('DOMContentLoaded', function() {
+    try {
+      console.log('DOM loaded, initializing charts');
+      
+      // Check if ApexCharts is available
+      if (typeof ApexCharts === 'undefined') {
+        console.error('ApexCharts library not loaded!');
+        document.querySelectorAll('.chart-container').forEach(container => {
+          container.innerHTML = '<div style="display:flex;justify-content:center;align-items:center;height:100%;color:#f72585;font-weight:bold;">Chart library failed to load</div>';
+        });
+        return;
+      }
+      
+      // Try to parse the data
+      let postsByDate, postsBySource, postsByStatus, topTags;
+      
+      try {
+        postsByDate = JSON.parse('<%- stats.postsByDate %>');
+        console.log('Parsed postsByDate:', postsByDate);
+      } catch (e) {
+        console.error('Error parsing postsByDate:', e);
+        postsByDate = [{_id: 'No Data', count: 0}];
+      }
+      
+      try {
+        postsBySource = JSON.parse('<%- stats.postsBySource %>');
+        console.log('Parsed postsBySource:', postsBySource);
+      } catch (e) {
+        console.error('Error parsing postsBySource:', e);
+        postsBySource = [{_id: 'No Data', count: 0}];
+      }
+      
+      try {
+        postsByStatus = JSON.parse('<%- stats.postsByStatus %>');
+        console.log('Parsed postsByStatus:', postsByStatus);
+      } catch (e) {
+        console.error('Error parsing postsByStatus:', e);
+        postsByStatus = [{_id: 'No Data', count: 0}];
+      }
+      
+      try {
+        topTags = JSON.parse('<%- stats.topTags %>');
+        console.log('Parsed topTags:', topTags);
+      } catch (e) {
+        console.error('Error parsing topTags:', e);
+        topTags = [{_id: 'No Data', count: 0}];
+      }
+      
+      // Vibrant Theme Colors - more distinguishable
+      const vibrantColors = [
+        '#4361ee', // blue
+        '#3a0ca3', // purple
+        '#4cc9f0', // light blue
+        '#f72585', // pink
+        '#06d6a0', // green
+        '#ffd166', // yellow
+        '#fb5607'  // orange
+      ];
+      
+      // Status-specific colors
+      const statusColors = [
+        '#2a9d8f', // teal
+        '#e76f51', // orange-red
+        '#8338ec', // purple
+        '#ffbe0b', // yellow
+        '#ff006e'  // pink
+      ];
+      
+      // Ensure chart containers exist
+      const containers = {
+        dateChart: document.getElementById('postsByDateChart'),
+        sourceChart: document.getElementById('postsBySourceChart'),
+        statusChart: document.getElementById('postsByStatusChart'),
+        tagsChart: document.getElementById('topTagsChart')
+      };
+      
+      // Verify containers
+      Object.entries(containers).forEach(([name, container]) => {
+        if (!container) {
+          console.error(`Container for ${name} not found!`);
+        } else {
+          console.log(`Container for ${name} found`);
+        }
+      });
+      
+      // Animate counters
+      document.querySelectorAll('.counter-value').forEach(function(el) {
+        try {
+          const value = parseInt(el.textContent, 10);
+          if (!isNaN(value)) {
+            const countUp = new CountUp(el, value, {
+              duration: 2.5,
+              useEasing: true
+            });
+            countUp.start();
+          }
+        } catch (e) {
+          console.error('Error animating counter:', e);
+        }
+      });
+      
+      // Create and modify the charts
+      if (containers.dateChart) {
+        const dateLabels = postsByDate.map(item => item._id);
+        const dateCounts = postsByDate.map(item => item.count);
+        
+        try {
+          const dateChartOptions = {
+            series: [{
+              name: 'News Posts',
+              data: dateCounts
+            }],
+            chart: {
+              type: 'area',
+              height: 300,
+              fontFamily: '"Segoe UI", Roboto, "Helvetica Neue", sans-serif',
+              animations: {
+                enabled: true,
+                easing: 'easeinout',
+                speed: 800,
+                animateGradually: {
+                  enabled: true,
+                  delay: 150
+                },
+                dynamicAnimation: {
+                  enabled: true,
+                  speed: 350
+                }
+              },
+              toolbar: {
+                show: false
+              },
+              background: '#fff'
+            },
+            colors: [vibrantColors[0]],
+            dataLabels: {
+              enabled: false
+            },
+            stroke: {
+              curve: 'smooth',
+              width: 3,
+              colors: [vibrantColors[0]],
+              lineCap: 'round'
+            },
+            fill: {
+              type: 'gradient',
+              gradient: {
+                shadeIntensity: 1,
+                opacityFrom: 0.7,
+                opacityTo: 0.3,
+                stops: [0, 90, 100],
+                colorStops: [
+                  {
+                    offset: 0,
+                    color: vibrantColors[0],
+                    opacity: 0.4
+                  },
+                  {
+                    offset: 100,
+                    color: vibrantColors[1],
+                    opacity: 0.1
+                  }
+                ]
+              }
+            },
+            markers: {
+              size: 5,
+              colors: [vibrantColors[0]],
+              strokeColors: "#fff",
+              strokeWidth: 2,
+              hover: {
+                size: 7,
+              }
+            },
+            grid: {
+              borderColor: 'rgba(0, 0, 0, 0.1)',
+              strokeDashArray: 3,
+              position: 'back'
+            },
+            xaxis: {
+              categories: dateLabels,
+              labels: {
+                style: {
+                  colors: '#333'
+                }
+              },
+              axisBorder: {
+                show: false
+              },
+              axisTicks: {
+                show: false
+              }
+            },
+            yaxis: {
+              labels: {
+                style: {
+                  colors: '#333'
+                }
+              }
+            },
+            tooltip: {
+              theme: 'light',
+              x: {
+                format: 'dd MMM yyyy'
+              }
+            },
+            legend: {
+              labels: {
+                colors: '#333'
+              }
+            },
+            theme: {
+              mode: 'light'
+            }
+          };
+          
+          const dateChart = new ApexCharts(containers.dateChart, dateChartOptions);
+          dateChart.render();
+        } catch (e) {
+          console.error('Error rendering date chart:', e);
+          containers.dateChart.innerHTML = '<div style="color:red">Failed to render chart</div>';
+        }
+      }
+      
+      if (containers.sourceChart) {
+        const sourceLabels = postsBySource.map(item => item._id);
+        const sourceCounts = postsBySource.map(item => item.count);
+        
+        try {
+          const sourceChartOptions = {
+            series: sourceCounts,
+            chart: {
+              type: 'donut',
+              height: 300,
+              fontFamily: '"Segoe UI", Roboto, "Helvetica Neue", sans-serif',
+              animations: {
+                enabled: true,
+                speed: 800,
+                animateGradually: {
+                  enabled: true,
+                  delay: 150
+                },
+                dynamicAnimation: {
+                  enabled: true,
+                  speed: 350
+                }
+              },
+              background: '#fff'
+            },
+            labels: sourceLabels,
+            colors: vibrantColors,
+            legend: {
+              position: 'bottom',
+              labels: {
+                colors: '#333'
+              },
+              markers: {
+                fillColors: vibrantColors
+              }
+            },
+            dataLabels: {
+              enabled: true,
+              style: {
+                colors: ['#fff']
+              },
+              dropShadow: {
+                enabled: true,
+                blur: 3,
+                opacity: 0.5
+              }
+            },
+            plotOptions: {
+              pie: {
+                donut: {
+                  size: '55%',
+                  labels: {
+                    show: true,
+                    name: {
+                      show: true,
+                      fontSize: '22px',
+                      fontFamily: '"Segoe UI", Roboto, "Helvetica Neue", sans-serif',
+                      color: '#333',
+                    },
+                    value: {
+                      show: true,
+                      fontSize: '16px',
+                      fontFamily: '"Segoe UI", Roboto, "Helvetica Neue", sans-serif',
+                      color: '#333',
+                      formatter: function (val) {
+                        return val;
+                      }
+                    },
+                    total: {
+                      show: true,
+                      label: 'Total',
+                      color: '#333',
+                      formatter: function (w) {
+                        return w.globals.seriesTotals.reduce((a, b) => a + b, 0);
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            stroke: {
+              width: 2,
+              colors: ['#fff']
+            },
+            theme: {
+              mode: 'light'
+            },
+            tooltip: {
+              theme: 'light'
+            }
+          };
+          
+          const sourceChart = new ApexCharts(containers.sourceChart, sourceChartOptions);
+          sourceChart.render();
+        } catch (e) {
+          console.error('Error rendering source chart:', e);
+          containers.sourceChart.innerHTML = '<div style="color:red">Failed to render chart</div>';
+        }
+      }
+      
+      if (containers.statusChart) {
+        const statusLabels = postsByStatus.map(item => item._id || 'Unknown');
+        const statusCounts = postsByStatus.map(item => item.count);
+        
+        try {
+          const statusChartOptions = {
+            series: [{
+              name: 'Posts',
+              data: statusCounts
+            }],
+            chart: {
+              type: 'bar',
+              height: 300,
+              fontFamily: '"Segoe UI", Roboto, "Helvetica Neue", sans-serif',
+              background: '#fff',
+              animations: {
+                enabled: true,
+                speed: 800,
+                dynamicAnimation: {
+                  enabled: true,
+                  speed: 350
+                }
+              },
+              toolbar: {
+                show: false
+              }
+            },
+            colors: statusColors,
+            plotOptions: {
+              bar: {
+                distributed: true,
+                borderRadius: 8,
+                dataLabels: {
+                  position: 'top'
+                },
+                columnWidth: '70%'
+              }
+            },
+            dataLabels: {
+              enabled: true,
+              formatter: function (val) {
+                return val;
+              },
+              offsetY: -20,
+              style: {
+                fontSize: '14px',
+                fontWeight: 'bold',
+                colors: ["#333"]
+              },
+              background: {
+                enabled: true,
+                foreColor: '#fff',
+                borderRadius: 4,
+                padding: 5,
+                opacity: 0.9,
+                borderWidth: 1,
+                borderColor: '#fff'
+              }
+            },
+            xaxis: {
+              categories: statusLabels,
+              position: 'bottom',
+              axisBorder: {
+                show: true,
+                color: '#e0e0e0'
+              },
+              axisTicks: {
+                show: false
+              },
+              labels: {
+                style: {
+                  colors: '#333',
+                  fontWeight: 'bold'
+                }
+              }
+            },
+            yaxis: {
+              labels: {
+                style: {
+                  colors: '#333'
+                },
+                formatter: function (val) {
+                  return Math.round(val);
+                }
+              }
+            },
+            grid: {
+              borderColor: 'rgba(0, 0, 0, 0.05)',
+              strokeDashArray: 3,
+              position: 'back'
+            },
+            fill: {
+              opacity: 1
+            },
+            legend: {
+              show: true,
+              position: 'bottom',
+              horizontalAlign: 'center'
+            },
+            theme: {
+              mode: 'light'
+            },
+            tooltip: {
+              theme: 'light',
+              y: {
+                formatter: function(val) {
+                  return val + " posts";
+                }
+              }
+            }
+          };
+          
+          const statusChart = new ApexCharts(containers.statusChart, statusChartOptions);
+          statusChart.render();
+        } catch (e) {
+          console.error('Error rendering status chart:', e);
+          containers.statusChart.innerHTML = '<div style="color:red">Failed to render chart</div>';
+        }
+      }
+      
+      if (containers.tagsChart) {
+        const tagLabels = topTags.map(item => item._id);
+        const tagCounts = topTags.map(item => item.count);
+        
+        try {
+          const tagChartOptions = {
+            series: [{
+              name: 'Articles',
+              data: tagCounts
+            }],
+            chart: {
+              type: 'bar',
+              height: 300,
+              fontFamily: '"Segoe UI", Roboto, "Helvetica Neue", sans-serif',
+              background: '#fff',
+              animations: {
+                enabled: true,
+                speed: 800,
+                dynamicAnimation: {
+                  enabled: true,
+                  speed: 350
+                }
+              },
+              toolbar: {
+                show: false
+              }
+            },
+            plotOptions: {
+              bar: {
+                borderRadius: 4,
+                horizontal: true,
+                barHeight: '60%',
+                distributed: true
+              }
+            },
+            dataLabels: {
+              enabled: true,
+              formatter: function (val) {
+                return val;
+              },
+              textAnchor: 'start',
+              style: {
+                fontSize: '12px',
+                colors: ["#333"]
+              },
+              offsetX: 5
+            },
+            colors: vibrantColors,
+            xaxis: {
+              categories: tagLabels,
+              labels: {
+                style: {
+                  colors: '#333',
+                  fontSize: '12px'
+                }
+              }
+            },
+            yaxis: {
+              labels: {
+                style: {
+                  colors: '#333'
+                }
+              }
+            },
+            grid: {
+              borderColor: 'rgba(0, 0, 0, 0.05)',
+              strokeDashArray: 3,
+              position: 'back'
+            },
+            legend: {
+              show: false
+            },
+            theme: {
+              mode: 'light'
+            },
+            tooltip: {
+              theme: 'light',
+              y: {
+                formatter: function(val) {
+                  return val + " articles";
+                }
+              }
+            }
+          };
+          
+          const tagChart = new ApexCharts(containers.tagsChart, tagChartOptions);
+          tagChart.render();
+        } catch (e) {
+          console.error('Error rendering tags chart:', e);
+          containers.tagsChart.innerHTML = '<div style="color:red">Failed to render chart</div>';
+        }
+      }
+    } catch (error) {
+      console.error("Main initialization error:", error);
+      document.querySelectorAll('.chart-container').forEach(container => {
+        container.innerHTML = '<div style="text-align:center;color:red;padding:20px;">Error initializing charts</div>';
+      });
+    }
+  });
+  
+  // Fallback to ensure light theme - execute immediately
+  (function applyLightTheme() {
+    document.documentElement.style.setProperty('background-color', '#ffffff', 'important');
+    document.body.style.setProperty('background-color', '#ffffff', 'important');
+    document.body.style.setProperty('color', '#333333', 'important');
+    
+    const style = document.createElement('style');
+    style.innerHTML = `
+      body, html { 
+        background-color: #ffffff !important; 
+        color: #333333 !important; 
+      }
+      .container, .container-fluid, main, .content-wrapper {
+        background-color: #ffffff !important;
+      }
+    `;
+    document.head.appendChild(style);
+  })();
+</script> 

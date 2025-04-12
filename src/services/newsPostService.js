@@ -131,11 +131,31 @@ exports.getAllNewsPosts = async (options = {}) => {
     if (search.trim().indexOf(' ') === -1) {
       query.$text = { $search: search };
     } else {
+      // Handle search terms with spaces properly
+      const searchTermEscaped = search.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+      const searchRegex = new RegExp(searchTermEscaped, 'i');
+      
       query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { content: { $regex: search, $options: 'i' } },
-        { tags: { $in: [new RegExp(search, 'i')] } }
+        { title: { $regex: searchRegex } },
+        { tags: { $in: [searchRegex] } }
       ];
+      
+      // For Map type content, we need to check if any value in the Map matches
+      // Unfortunately, we can't directly search in all Map values with a single query
+      // We'll attempt to match any known content types like 'body', 'summary', etc.
+      if (NewsPost.schema.paths.content) {
+        // Common content field names to check
+        ['body', 'summary', 'excerpt', 'description', 'text'].forEach(field => {
+          const contentQuery = {};
+          contentQuery[`content.${field}`] = { $regex: searchRegex };
+          query.$or.push(contentQuery);
+        });
+      }
+      
+      // Add a separate query for searching in creator field
+      if (NewsPost.schema.paths.creator) {
+        query.$or.push({ creator: { $regex: searchRegex } });
+      }
     }
   }
   

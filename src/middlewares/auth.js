@@ -27,6 +27,34 @@ const protect = catchAsync(async (req, res, next) => {
   // 3) Store the API key document on the request object for later use
   req.apiKey = apiKeyDoc;
   
+  // 4) Track API key usage
+  try {
+    // Extract client IP and user agent
+    const ip = req.headers['x-forwarded-for'] || 
+               req.connection.remoteAddress || 
+               req.socket.remoteAddress || 
+               req.ip || 
+               'Unknown';
+               
+    const userAgent = req.headers['user-agent'] || 'Unknown';
+    
+    // Track usage (but don't await - we don't want to slow down the request)
+    apiKeyDoc.trackUsage({ ip, userAgent }).catch(err => {
+      // Just log the error, don't block the request
+      logger.error({
+        msg: 'Error tracking API key usage',
+        error: err.message,
+        keyName: apiKeyDoc.name
+      });
+    });
+  } catch (err) {
+    // Log error but continue processing the request
+    logger.error({
+      msg: 'Error tracking API key usage',
+      error: err.message
+    });
+  }
+  
   logger.info({
     msg: 'API key authenticated',
     keyName: apiKeyDoc.name,

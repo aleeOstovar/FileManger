@@ -17,12 +17,112 @@ exports.getDashboard = catchAsync(async (req, res) => {
   const activeApiKeys = await ApiKey.countDocuments({ active: true });
   const users = await User.countDocuments({ active: true });
   
+  // Get news post stats by date (last 30 days)
+  const postsByDate = await NewsPost.aggregate([
+    {
+      $match: {
+        createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
+      }
+    },
+    {
+      $group: {
+        _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+        count: { $sum: 1 }
+      }
+    },
+    {
+      $sort: { _id: 1 }
+    }
+  ]);
+
+  // Get news post stats by source (extracted from sourceUrl)
+  const postsBySource = await NewsPost.aggregate([
+    {
+      $match: {
+        sourceUrl: { $ne: null, $exists: true }
+      }
+    },
+    {
+      $project: {
+        sourceName: {
+          $cond: {
+            if: { $regexMatch: { input: "$sourceUrl", regex: /mihanblockchain\.com/i } },
+            then: "MihanBlockchain",
+            else: {
+              $cond: {
+                if: { $regexMatch: { input: "$sourceUrl", regex: /arzdigital\.com/i } },
+                then: "Arzdigital",
+                else: {
+                  $cond: {
+                    if: { $regexMatch: { input: "$sourceUrl", regex: /difer\.io/i } },
+                    then: "Difer",
+                    else: "Other"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      $group: {
+        _id: "$sourceName",
+        count: { $sum: 1 }
+      }
+    },
+    {
+      $sort: { count: -1 }
+    }
+  ]);
+
+  // Get news post stats by status
+  const postsByStatus = await NewsPost.aggregate([
+    {
+      $group: {
+        _id: "$status",
+        count: { $sum: 1 }
+      }
+    },
+    { 
+      $sort: { count: -1 } 
+    }
+  ]);
+
+  // Get total news posts
+  const totalPosts = await NewsPost.countDocuments();
+
+  // Get posts from the last 24 hours
+  const postsLast24Hours = await NewsPost.countDocuments({
+    createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
+  });
+
+  // Get posts from the last 7 days
+  const postsLast7Days = await NewsPost.countDocuments({
+    createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+  });
+
+  // Get top 5 tags
+  const topTags = await NewsPost.aggregate([
+    { $unwind: "$tags" },
+    { $group: { _id: "$tags", count: { $sum: 1 } } },
+    { $sort: { count: -1 } },
+    { $limit: 5 }
+  ]);
+  
   res.render('dashboard/index', {
     title: 'Dashboard',
     active: 'dashboard',
     stats: {
       activeApiKeys,
-      users
+      users,
+      totalPosts,
+      postsLast24Hours,
+      postsLast7Days,
+      postsByDate: JSON.stringify(postsByDate),
+      postsBySource: JSON.stringify(postsBySource),
+      postsByStatus: JSON.stringify(postsByStatus),
+      topTags: JSON.stringify(topTags)
     },
     messages: {
       error: req.flash('error'),
@@ -116,12 +216,16 @@ exports.createApiKey = catchAsync(async (req, res) => {
       keyId: apiKey._id
     });
     
-    // Set flash message with the API key (will be shown once)
-    req.flash('success', 'API key created successfully');
-    req.flash('apiKey', keyValue);
-    
-    // Redirect to API key details page to show the newly created key
-    return res.redirect(`/dashboard/api-keys/${apiKey._id}`);
+    // Render a page with the new API key in a modal
+    return res.render('dashboard/api-keys/key-created', {
+      title: 'API Key Created',
+      active: 'api-keys',
+      apiKeyValue: keyValue,
+      apiKeyId: apiKey._id,
+      csrfToken: req.csrfToken ? req.csrfToken() : null,
+      layout: './layouts/dashboard',
+      messages: {} // Empty messages object to prevent alerts from showing
+    });
   } catch (err) {
     logger.error({
       msg: 'Error creating API key',
@@ -193,7 +297,6 @@ exports.getApiKeyDetails = catchAsync(async (req, res) => {
     active: 'api-keys',
     apiKey,
     csrfToken: req.csrfToken ? req.csrfToken() : null,
-    newKey: req.flash('apiKey')[0] || null,
     messages: {
       error: req.flash('error'),
       success: req.flash('success'),
@@ -206,8 +309,10 @@ exports.getApiKeyDetails = catchAsync(async (req, res) => {
  * User Management (Admin Only)
  */
 
-// Get all users
-const getUsers = catchAsync(async (req, res) => {
+/**
+ * Get all users
+ */
+exports.getUsers = catchAsync(async (req, res) => {
   // Parse query params
   const page = parseInt(req.query.page, 10) || 1;
   const limit = parseInt(req.query.limit, 10) || 10;
@@ -216,7 +321,7 @@ const getUsers = catchAsync(async (req, res) => {
   // Get count for pagination
   const total = await User.countDocuments();
   
-  // Get users
+  // Get users (exclude current user's own record for modifying)
   const users = await User.find()
     .sort({ createdAt: -1 })
     .skip(skip)
@@ -224,6 +329,8 @@ const getUsers = catchAsync(async (req, res) => {
   
   res.render('dashboard/users/index', {
     title: 'Users',
+    active: 'users',
+    user: req.session.user, // Pass current user for self-deactivation prevention
     users,
     pagination: {
       page,
@@ -231,6 +338,7 @@ const getUsers = catchAsync(async (req, res) => {
       total,
       pages: Math.ceil(total / limit)
     },
+    csrfToken: req.csrfToken ? req.csrfToken() : null,
     messages: {
       error: req.flash('error'),
       success: req.flash('success'),
@@ -239,11 +347,14 @@ const getUsers = catchAsync(async (req, res) => {
   });
 });
 
-// Render create user form
-const getCreateUserForm = catchAsync(async (req, res) => {
+/**
+ * Render create user form
+ */
+exports.getCreateUserForm = catchAsync(async (req, res) => {
   res.render('dashboard/users/create', {
     title: 'Create User',
-    csrfToken: req.csrfToken ? req.csrfToken() : '',
+    active: 'users',
+    csrfToken: req.csrfToken ? req.csrfToken() : null,
     messages: {
       error: req.flash('error'),
       success: req.flash('success'),
@@ -252,12 +363,21 @@ const getCreateUserForm = catchAsync(async (req, res) => {
   });
 });
 
-// Create new user
-const createUser = catchAsync(async (req, res) => {
-  const { name, email, password, role } = req.body;
+/**
+ * Create new user
+ */
+exports.createUser = catchAsync(async (req, res) => {
+  const { name, email, password, passwordConfirm, role } = req.body;
   
+  // Validate required fields
   if (!name || !email || !password) {
     req.flash('error', 'Name, email, and password are required');
+    return res.redirect('/dashboard/users/create');
+  }
+  
+  // Validate password matching
+  if (password !== passwordConfirm) {
+    req.flash('error', 'Passwords do not match');
     return res.redirect('/dashboard/users/create');
   }
   
@@ -266,7 +386,7 @@ const createUser = catchAsync(async (req, res) => {
     name,
     email,
     role,
-    createdBy: req.user ? req.user._id : 'Unknown'
+    createdBy: req.session.user ? req.session.user.id : 'Unknown'
   });
   
   try {
@@ -275,7 +395,7 @@ const createUser = catchAsync(async (req, res) => {
       name,
       email,
       password,
-      role: role || 'viewer'
+      role: role || 'user'
     });
     
     req.flash('success', 'User created successfully');
@@ -296,8 +416,10 @@ const createUser = catchAsync(async (req, res) => {
   }
 });
 
-// Toggle user active status
-const toggleUserStatus = catchAsync(async (req, res) => {
+/**
+ * Toggle user active status
+ */
+exports.toggleUserStatus = catchAsync(async (req, res) => {
   const user = await User.findById(req.params.id);
   
   if (!user) {
@@ -306,7 +428,7 @@ const toggleUserStatus = catchAsync(async (req, res) => {
   }
   
   // Prevent deactivating yourself
-  if (user._id.toString() === req.user._id.toString()) {
+  if (user._id.toString() === req.session.user.id.toString()) {
     req.flash('error', 'You cannot deactivate your own account');
     return res.redirect('/dashboard/users');
   }
@@ -315,7 +437,7 @@ const toggleUserStatus = catchAsync(async (req, res) => {
     msg: `${user.active ? 'Deactivating' : 'Activating'} user`,
     userId: user._id,
     email: user.email,
-    performedBy: req.user ? req.user._id : 'Unknown'
+    performedBy: req.session.user ? req.session.user.id : 'Unknown'
   });
   
   // Toggle active status
@@ -951,6 +1073,208 @@ exports.previewNewsPost = catchAsync(async (req, res, next) => {
   });
 });
 
+/**
+ * Get user profile page
+ */
+exports.getProfile = catchAsync(async (req, res) => {
+  // Get current user with password field excluded
+  const user = await User.findById(req.session.user.id).select('-password');
+  
+  if (!user) {
+    req.flash('error', 'User not found');
+    return res.redirect('/dashboard');
+  }
+  
+  res.render('dashboard/profile', {
+    title: 'My Profile',
+    active: 'profile',
+    user,
+    csrfToken: req.csrfToken ? req.csrfToken() : null,
+    messages: {
+      error: req.flash('error'),
+      success: req.flash('success'),
+      info: req.flash('info')
+    }
+  });
+});
+
+/**
+ * Update user profile
+ */
+exports.updateProfile = catchAsync(async (req, res) => {
+  const { name, email, currentPassword, newPassword, confirmPassword } = req.body;
+  
+  // Get current user
+  const user = await User.findById(req.session.user.id);
+  
+  if (!user) {
+    req.flash('error', 'User not found');
+    return res.redirect('/dashboard/profile');
+  }
+  
+  // Update basic info (name and email)
+  if (name) user.name = name;
+  if (email && email !== user.email) {
+    // Check if email is already in use
+    const existingUser = await User.findOne({ email, _id: { $ne: user._id } });
+    if (existingUser) {
+      req.flash('error', 'Email is already in use');
+      return res.redirect('/dashboard/profile');
+    }
+    user.email = email;
+  }
+  
+  // Check if password should be updated
+  if (newPassword) {
+    // Validate current password
+    if (!currentPassword) {
+      req.flash('error', 'Current password is required to set a new password');
+      return res.redirect('/dashboard/profile');
+    }
+    
+    // Verify current password
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) {
+      req.flash('error', 'Current password is incorrect');
+      return res.redirect('/dashboard/profile');
+    }
+    
+    // Validate new password
+    if (newPassword !== confirmPassword) {
+      req.flash('error', 'New password and confirmation do not match');
+      return res.redirect('/dashboard/profile');
+    }
+    
+    // Set new password
+    user.password = newPassword;
+  }
+  
+  // Save updated user
+  await user.save();
+  
+  // Update session user data
+  req.session.user = {
+    id: user._id,
+    name: user.name,
+    email: user.email,
+    role: user.role
+  };
+  
+  req.flash('success', 'Profile updated successfully');
+  res.redirect('/dashboard/profile');
+});
+
+/**
+ * Get dashboard statistics for the frontend
+ */
+exports.getDashboardStats = catchAsync(async (req, res, next) => {
+  // Get news post stats by date
+  const postsByDate = await NewsPost.aggregate([
+    {
+      $match: {
+        createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } // Last 30 days
+      }
+    },
+    {
+      $group: {
+        _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+        count: { $sum: 1 }
+      }
+    },
+    {
+      $sort: { _id: 1 }
+    }
+  ]);
+
+  // Get news post stats by source (extracted from sourceUrl)
+  const postsBySource = await NewsPost.aggregate([
+    {
+      $match: {
+        sourceUrl: { $ne: null, $exists: true }
+      }
+    },
+    {
+      $project: {
+        sourceName: {
+          $cond: {
+            if: { $regexMatch: { input: "$sourceUrl", regex: /mihanblockchain\.com/i } },
+            then: "MihanBlockchain",
+            else: {
+              $cond: {
+                if: { $regexMatch: { input: "$sourceUrl", regex: /arzdigital\.com/i } },
+                then: "Arzdigital",
+                else: {
+                  $cond: {
+                    if: { $regexMatch: { input: "$sourceUrl", regex: /difer\.io/i } },
+                    then: "Difer",
+                    else: "Other"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      $group: {
+        _id: "$sourceName",
+        count: { $sum: 1 }
+      }
+    },
+    {
+      $sort: { count: -1 }
+    }
+  ]);
+
+  // Get news post stats by status
+  const postsByStatus = await NewsPost.aggregate([
+    {
+      $group: {
+        _id: "$status",
+        count: { $sum: 1 }
+      }
+    },
+    { 
+      $sort: { count: -1 } 
+    }
+  ]);
+
+  // Get total news posts
+  const totalPosts = await NewsPost.countDocuments();
+
+  // Get posts from the last 24 hours
+  const postsLast24Hours = await NewsPost.countDocuments({
+    createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
+  });
+
+  // Get posts from the last 7 days
+  const postsLast7Days = await NewsPost.countDocuments({
+    createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+  });
+
+  // Get top 5 tags
+  const topTags = await NewsPost.aggregate([
+    { $unwind: "$tags" },
+    { $group: { _id: "$tags", count: { $sum: 1 } } },
+    { $sort: { count: -1 } },
+    { $limit: 5 }
+  ]);
+
+  res.status(200).json({
+    status: 'success',
+    data: {
+      postsByDate,
+      postsBySource,
+      postsByStatus,
+      totalPosts,
+      postsLast24Hours,
+      postsLast7Days,
+      topTags
+    }
+  });
+});
+
 module.exports = {
   getDashboard: exports.getDashboard,
   getApiKeys: exports.getApiKeys,
@@ -958,10 +1282,10 @@ module.exports = {
   createApiKey: exports.createApiKey,
   revokeApiKey: exports.revokeApiKey,
   getApiKeyDetails: exports.getApiKeyDetails,
-  getUsers,
-  getCreateUserForm,
-  createUser,
-  toggleUserStatus,
+  getUsers: exports.getUsers,
+  getCreateUserForm: exports.getCreateUserForm,
+  createUser: exports.createUser,
+  toggleUserStatus: exports.toggleUserStatus,
   getNewsPostsPage: exports.getNewsPostsPage,
   getCreateNewsPostPage: exports.getCreateNewsPostPage,
   createNewsPost: exports.createNewsPost,
@@ -974,5 +1298,8 @@ module.exports = {
   scheduleScraper: exports.scheduleScraper,
   unscheduleScraper: exports.unscheduleScraper,
   getScrapingProgress: exports.getScrapingProgress,
-  previewNewsPost: exports.previewNewsPost
+  previewNewsPost: exports.previewNewsPost,
+  getProfile: exports.getProfile,
+  updateProfile: exports.updateProfile,
+  getDashboardStats: exports.getDashboardStats
 }; 
