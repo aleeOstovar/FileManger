@@ -1,0 +1,185 @@
+<div class="mb-4">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="/dashboard/rss-posts">RSS Posts</a></li>
+      <li class="breadcrumb-item active" aria-current="page"><%= isEditing ? 'Edit' : 'Create' %> RSS Post</li>
+    </ol>
+  </nav>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h1 class="h3 mb-0"><%= isEditing ? 'Edit' : 'Create' %> RSS Post</h1>
+  </div>
+  <div class="card-body">
+    <form action="<%= formAction %>" method="POST" id="rssPostForm">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      
+      <div class="row mb-3">
+        <div class="col-md-8">
+          <div class="mb-3">
+            <label for="title" class="form-label required">Title</label>
+            <input type="text" class="form-control" id="title" name="title" value="<%= rssPost?.title || '' %>" required>
+          </div>
+          
+          <div class="mb-3">
+            <label for="content" class="form-label">Content</label>
+            <textarea class="form-control" id="content" name="content" rows="15" dir="rtl" style="text-align: right;"><%= rssPost?.content || '' %></textarea>
+          </div>
+          
+          <div class="mb-3">
+            <label for="contentSnippet" class="form-label">Content Snippet</label>
+            <textarea class="form-control" id="contentSnippet" name="contentSnippet" rows="3" dir="rtl" style="text-align: right;"><%= rssPost?.contentSnippet || '' %></textarea>
+            <small class="text-muted">A short summary of the content</small>
+          </div>
+        </div>
+        
+        <div class="col-md-4">
+          <div class="mb-3">
+            <label for="status" class="form-label">Status</label>
+            <select class="form-select" id="status" name="status">
+              <option value="draft" <%= (rssPost?.status === 'draft' || !rssPost?.status) ? 'selected' : '' %>>Draft</option>
+              <option value="published" <%= rssPost?.status === 'published' ? 'selected' : '' %>>Published</option>
+              <option value="archived" <%= rssPost?.status === 'archived' ? 'selected' : '' %>>Archived</option>
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <label for="creator" class="form-label">Creator</label>
+            <input type="text" class="form-control" id="creator" name="creator" value="<%= rssPost?.creator || '' %>">
+          </div>
+          
+          <div class="mb-3">
+            <label for="sourceURL" class="form-label required">Source URL</label>
+            <input type="url" class="form-control" id="sourceURL" name="sourceURL" value="<%= rssPost?.sourceURL || '' %>" required>
+          </div>
+          
+          <div class="mb-3">
+            <label for="pubDate" class="form-label required">Publication Date</label>
+            <input type="datetime-local" class="form-control" id="pubDate" name="pubDate" 
+              <% 
+              let dateValue = new Date().toISOString().slice(0, 16);
+              // Try to use pubDate first
+              if (rssPost?.pubDate) {
+                try {
+                  const date = new Date(rssPost.pubDate);
+                  if (!isNaN(date.getTime())) {
+                    dateValue = date.toISOString().slice(0, 16);
+                  } else if (rssPost?.createdAt) {
+                    // Fall back to createdAt if pubDate is invalid
+                    const createdDate = new Date(rssPost.createdAt);
+                    if (!isNaN(createdDate.getTime())) {
+                      dateValue = createdDate.toISOString().slice(0, 16);
+                    }
+                  }
+                } catch (e) {
+                  // If pubDate parsing fails, try createdAt
+                  if (rssPost?.createdAt) {
+                    try {
+                      const createdDate = new Date(rssPost.createdAt);
+                      if (!isNaN(createdDate.getTime())) {
+                        dateValue = createdDate.toISOString().slice(0, 16);
+                      }
+                    } catch (err) {
+                      // Use default value if both fail
+                    }
+                  }
+                }
+              } else if (rssPost?.createdAt) {
+                // Use createdAt if pubDate doesn't exist
+                try {
+                  const createdDate = new Date(rssPost.createdAt);
+                  if (!isNaN(createdDate.getTime())) {
+                    dateValue = createdDate.toISOString().slice(0, 16);
+                  }
+                } catch (e) {
+                  // Use default if parsing fails
+                }
+              }
+              %>
+              value="<%= dateValue %>" required>
+            <% if (rssPost?.pubDate || rssPost?.createdAt) { %>
+              <small class="text-muted">
+                <% if (rssPost?.pubDate) { %>
+                  <% try { %>
+                    <% const date = new Date(rssPost.pubDate); %>
+                    <% if (!isNaN(date.getTime())) { %>
+                      Original publication date: <%= date.toLocaleString() %>
+                    <% } else if (rssPost?.createdAt) { %>
+                      Using creation date: <%= new Date(rssPost.createdAt).toLocaleString() %>
+                    <% } else { %>
+                      Original date: <%= rssPost.pubDate %> (invalid format)
+                    <% } %>
+                  <% } catch (e) { %>
+                    <% if (rssPost?.createdAt) { %>
+                      Using creation date: <%= new Date(rssPost.createdAt).toLocaleString() %>
+                    <% } else { %>
+                      Original date: <%= rssPost.pubDate %> (invalid format)
+                    <% } %>
+                  <% } %>
+                <% } else if (rssPost?.createdAt) { %>
+                  Using creation date: <%= new Date(rssPost.createdAt).toLocaleString() %>
+                <% } %>
+              </small>
+            <% } %>
+          </div>
+          
+          <div class="mb-3">
+            <label for="categories" class="form-label">Categories</label>
+            <input type="text" class="form-control" id="categories" name="categories" value="<%= rssPost?.categories ? rssPost.categories.join(', ') : '' %>">
+            <small class="text-muted">Separate categories with commas</small>
+          </div>
+          
+          <div class="mb-3">
+            <label for="thumbnailImage" class="form-label">Thumbnail Image URL</label>
+            <input type="url" class="form-control" id="thumbnailImage" name="thumbnailImage" value="<%= rssPost?.thumbnailImage || '' %>">
+            <% if (rssPost?.thumbnailImage) { %>
+              <div class="mt-2">
+                <img src="<%= rssPost.thumbnailImage %>" alt="Thumbnail preview" class="img-fluid rounded" style="max-height: 150px;">
+              </div>
+            <% } %>
+          </div>
+        </div>
+      </div>
+      
+      <div class="d-flex justify-content-between">
+        <a href="<%= isEditing ? `/dashboard/rss-posts/${rssPost._id}/preview` : '/dashboard/rss-posts' %>" class="btn btn-secondary">
+          <i class="fas fa-arrow-left"></i> Cancel
+        </a>
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-save"></i> <%= isEditing ? 'Update' : 'Create' %> RSS Post
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Basic client-side validation
+    const form = document.getElementById('rssPostForm');
+    form.addEventListener('submit', function(event) {
+      const title = document.getElementById('title').value.trim();
+      const sourceURL = document.getElementById('sourceURL').value.trim();
+      const pubDate = document.getElementById('pubDate').value.trim();
+      
+      if (!title) {
+        event.preventDefault();
+        alert('Please enter a title for the RSS post.');
+        return;
+      }
+      
+      if (!sourceURL) {
+        event.preventDefault();
+        alert('Please enter a source URL for the RSS post.');
+        return;
+      }
+      
+      if (!pubDate) {
+        event.preventDefault();
+        alert('Please enter a publication date for the RSS post.');
+        return;
+      }
+    });
+  });
+</script> 

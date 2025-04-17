@@ -5,9 +5,12 @@ const logger = require('../utils/logger');
 const mongoose = require('mongoose');
 const File = require('../models/File');
 const NewsPost = require('../models/NewsPost');
+const RssPost = require('../models/RssPost');
 const newsPostService = require('../services/newsPostService');
+const rssPostService = require('../services/rssPostService');
 const apiKeyService = require('../services/apiKeyService');
 const { normalizeImagesFormat } = require('../utils/newsUtils'); // Import from utils
+const { downloadAndSaveImage, getFullImageUrl } = require('../utils/imageUtils');
 
 /**
  * Dashboard home controller
@@ -1068,8 +1071,8 @@ exports.previewNewsPost = catchAsync(async (req, res, next) => {
     title: `Preview: ${newsPost.title}`,
     active: 'news-posts',
     newsPost,
-    layout: './layouts/main' // Ensure layout is specified if needed
-    // No need for messages or csrfToken in a pure preview usually
+    csrfToken: req.csrfToken ? req.csrfToken() : null,
+    layout: './layouts/main'
   });
 });
 
@@ -1275,6 +1278,261 @@ exports.getDashboardStats = catchAsync(async (req, res, next) => {
   });
 });
 
+/**
+ * Render the RSS Posts index page
+ */
+exports.getRssPostsPage = catchAsync(async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const status = req.query.status || 'published';
+  const searchTerm = req.query.search || '';
+  
+  // Build query for RSS posts
+  const query = {};
+  
+  if (status) {
+    query.status = status;
+  }
+  
+  if (searchTerm) {
+    query.$or = [
+      { title: { $regex: searchTerm, $options: 'i' } },
+      { creator: { $regex: searchTerm, $options: 'i' } },
+      { contentSnippet: { $regex: searchTerm, $options: 'i' } }
+    ];
+  }
+  
+  // Execute query with pagination
+  const rssPosts = await RssPost.find(query)
+    .sort({ pubDate: -1 })
+    .skip((page - 1) * limit)
+    .limit(limit);
+  
+  // Get total count for pagination
+  const total = await RssPost.countDocuments(query);
+  
+  res.render('dashboard/rss-posts/index', {
+    title: 'RSS Posts',
+    rssPosts,
+    pagination: {
+      page: page,
+      limit: limit,
+      pages: Math.ceil(total / limit),
+      total: total
+    },
+    currentStatus: status,
+    searchTerm: searchTerm,
+    active: 'rss-posts',
+    csrfToken: req.csrfToken ? req.csrfToken() : null,
+    messages: {
+      error: req.flash('error'),
+      success: req.flash('success'),
+      info: req.flash('info')
+    }
+  });
+});
+
+/**
+ * Render the form to create a new RSS Post
+ */
+exports.getCreateRssPostPage = catchAsync(async (req, res) => {
+  res.render('dashboard/rss-posts/form', {
+    title: 'Create RSS Post',
+    rssPost: null,
+    isEditing: false,
+    formAction: '/dashboard/rss-posts/create',
+    active: 'rss-posts',
+    csrfToken: req.csrfToken ? req.csrfToken() : null,
+    messages: {
+      error: req.flash('error'),
+      success: req.flash('success'),
+      info: req.flash('info')
+    }
+  });
+});
+
+/**
+ * Handle the creation of a new RSS Post
+ */
+exports.createRssPost = catchAsync(async (req, res) => {
+  const {
+    title, content, contentSnippet, status, creator, 
+    sourceURL, thumbnailImage, categories, pubDate
+  } = req.body;
+  
+  // Process the categories from comma-separated string to array
+  const categoriesArray = categories ? categories.split(',').map(cat => cat.trim()).filter(cat => cat) : [];
+  
+  // Process and upload the thumbnail image if provided
+  let thumbnailImageUrl = thumbnailImage;
+  if (thumbnailImage && thumbnailImage.startsWith('http')) {
+    try {
+      const file = await downloadAndSaveImage(thumbnailImage);
+      if (file) {
+        thumbnailImageUrl = getFullImageUrl(file, req);
+        logger.info(`Thumbnail image uploaded and replaced: ${thumbnailImage} -> ${thumbnailImageUrl}`);
+      }
+    } catch (error) {
+      logger.error(`Failed to upload thumbnail image: ${error.message}`);
+      // Continue with original URL if upload fails
+    }
+  }
+  
+  const rssPostData = {
+    title,
+    content,
+    contentSnippet,
+    status: status || 'draft',
+    creator,
+    sourceURL,
+    thumbnailImage: thumbnailImageUrl,
+    categories: categoriesArray,
+    pubDate: pubDate || new Date().toISOString()
+  };
+  
+  const rssPost = await rssPostService.createRssPost(rssPostData);
+  
+  req.flash('success', 'RSS post created successfully');
+  res.redirect(`/dashboard/rss-posts/${rssPost._id}/preview`);
+});
+
+/**
+ * Show preview page for an RSS post
+ */
+exports.previewRssPost = catchAsync(async (req, res, next) => {
+  const rssPost = await rssPostService.getRssPostById(req.params.id);
+  
+  if (!rssPost) {
+    req.flash('error', 'RSS post not found.');
+    return res.redirect('/dashboard/rss-posts');
+  }
+
+  // Fix invalid pubDate by using createdAt as fallback
+  if (rssPost.pubDate) {
+    try {
+      const date = new Date(rssPost.pubDate);
+      if (isNaN(date.getTime())) {
+        // If pubDate is invalid, use createdAt
+        rssPost.pubDate = rssPost.createdAt;
+      }
+    } catch (e) {
+      // If pubDate parsing fails, use createdAt
+      rssPost.pubDate = rssPost.createdAt;
+    }
+  } else {
+    // If pubDate doesn't exist, use createdAt
+    rssPost.pubDate = rssPost.createdAt;
+  }
+
+  res.render('dashboard/rss-posts/preview', {
+    title: `Preview: ${rssPost.title}`,
+    active: 'rss-posts',
+    rssPost,
+    csrfToken: req.csrfToken ? req.csrfToken() : null,
+    layout: './layouts/main'
+  });
+});
+
+/**
+ * Render the form to edit an RSS Post
+ */
+exports.getEditRssPostPage = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  
+  const rssPost = await rssPostService.getRssPostById(id);
+  
+  if (!rssPost) {
+    req.flash('error', 'RSS post not found');
+    return res.redirect('/dashboard/rss-posts');
+  }
+  
+  res.render('dashboard/rss-posts/form', {
+    title: `Edit ${rssPost.title}`,
+    rssPost,
+    isEditing: true,
+    formAction: `/dashboard/rss-posts/${id}/edit`,
+    active: 'rss-posts',
+    csrfToken: req.csrfToken ? req.csrfToken() : null,
+    messages: {
+      error: req.flash('error'),
+      success: req.flash('success'),
+      info: req.flash('info')
+    }
+  });
+});
+
+/**
+ * Handle updating an RSS Post
+ */
+exports.updateRssPost = catchAsync(async (req, res) => {
+  const {
+    title, content, contentSnippet, status, creator, 
+    sourceURL, thumbnailImage, categories, pubDate
+  } = req.body;
+  
+  // Process the categories from comma-separated string to array
+  const categoriesArray = categories ? categories.split(',').map(cat => cat.trim()).filter(cat => cat) : [];
+  
+  // Get existing post to check if we need to upload a new thumbnail
+  const existingPost = await rssPostService.getRssPostById(req.params.id);
+  
+  // Process and upload the thumbnail image if it's new or changed
+  let thumbnailImageUrl = thumbnailImage;
+  if (thumbnailImage && 
+      thumbnailImage.startsWith('http') && 
+      (!existingPost || existingPost.thumbnailImage !== thumbnailImage)) {
+    try {
+      const file = await downloadAndSaveImage(thumbnailImage);
+      if (file) {
+        thumbnailImageUrl = getFullImageUrl(file, req);
+        logger.info(`Thumbnail image uploaded and replaced: ${thumbnailImage} -> ${thumbnailImageUrl}`);
+      }
+    } catch (error) {
+      logger.error(`Failed to upload thumbnail image: ${error.message}`);
+      // Continue with original URL if upload fails
+    }
+  }
+  
+  const rssPostData = {
+    title,
+    content,
+    contentSnippet,
+    status,
+    creator,
+    sourceURL,
+    thumbnailImage: thumbnailImageUrl,
+    categories: categoriesArray,
+    pubDate
+  };
+  
+  const updatedRssPost = await rssPostService.updateRssPost(req.params.id, rssPostData);
+  
+  if (!updatedRssPost) {
+    req.flash('error', 'RSS post not found');
+    return res.redirect('/dashboard/rss-posts');
+  }
+  
+  req.flash('success', 'RSS post updated successfully');
+  res.redirect(`/dashboard/rss-posts/${updatedRssPost._id}/preview`);
+});
+
+/**
+ * Delete an RSS Post
+ */
+exports.deleteRssPost = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  
+  const result = await rssPostService.deleteRssPost(id);
+  
+  if (!result || !result.success) {
+    req.flash('error', 'Failed to delete RSS post');
+    return res.redirect('/dashboard/rss-posts');
+  }
+  
+  req.flash('success', 'RSS post deleted successfully');
+  res.redirect('/dashboard/rss-posts');
+});
+
 module.exports = {
   getDashboard: exports.getDashboard,
   getApiKeys: exports.getApiKeys,
@@ -1301,5 +1559,12 @@ module.exports = {
   previewNewsPost: exports.previewNewsPost,
   getProfile: exports.getProfile,
   updateProfile: exports.updateProfile,
-  getDashboardStats: exports.getDashboardStats
+  getDashboardStats: exports.getDashboardStats,
+  getRssPostsPage: exports.getRssPostsPage,
+  getCreateRssPostPage: exports.getCreateRssPostPage,
+  createRssPost: exports.createRssPost,
+  previewRssPost: exports.previewRssPost,
+  getEditRssPostPage: exports.getEditRssPostPage,
+  updateRssPost: exports.updateRssPost,
+  deleteRssPost: exports.deleteRssPost
 }; 

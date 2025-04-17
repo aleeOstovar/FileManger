@@ -1,0 +1,195 @@
+<div class="mb-4">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="/dashboard/rss-posts">RSS Posts</a></li>
+      <li class="breadcrumb-item active" aria-current="page">Preview</li>
+    </ol>
+  </nav>
+</div>
+
+<div class="rtl persian-content bg-light p-3 mb-4 border">
+  <div class="row">
+    <div class="col-md-9">
+      <h1 class="mb-0" dir="rtl"><%= rssPost.title %></h1>
+    </div>
+    <div class="col-md-3 text-end d-flex justify-content-end align-items-center">
+      <% if (user.role === 'admin' || user.role === 'manager') { %>
+        <a href="/dashboard/rss-posts/<%= rssPost._id %>/edit" class="btn btn-warning me-2">
+          <i class="fas fa-pencil-alt"></i> Edit
+        </a>
+      <% } %>
+      <% if (user.role === 'admin') { %>
+        <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+          <i class="fas fa-trash-alt"></i> Delete
+        </button>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-8 order-md-2">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="mb-0">Content</h5>
+      </div>
+      <div class="card-body">
+        <% if (rssPost.thumbnailImage) { %>
+          <div class="text-center mb-4">
+            <img src="<%= rssPost.thumbnailImage %>" alt="Thumbnail" class="img-fluid rounded" style="max-height: 300px;">
+          </div>
+        <% } %>
+        
+        <% if (rssPost.contentSnippet) { %>
+          <div class="alert alert-light mb-4 rtl persian-content" dir="rtl">
+            <strong>Content Snippet:</strong>
+            <p class="mb-0"><%= rssPost.contentSnippet %></p>
+          </div>
+        <% } %>
+        
+        <% if (rssPost.content) { %>
+          <div class="content-area rtl persian-content" dir="rtl" style="text-align: right; line-height: 1.8;">
+            <%= rssPost.content %>
+          </div>
+        <% } else { %>
+          <div class="alert alert-info">
+            No content available.
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-4 order-md-1">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="mb-0">Details</h5>
+      </div>
+      <div class="card-body">
+        <ul class="list-group list-group-flush">
+          <li class="list-group-item d-flex justify-content-between">
+            <strong>Status:</strong>
+            <span class="badge bg-<%= rssPost.status === 'published' ? 'success' : (rssPost.status === 'draft' ? 'warning' : 'secondary') %>">
+              <%= rssPost.status %>
+            </span>
+          </li>
+          
+          <li class="list-group-item d-flex justify-content-between">
+            <strong>Creator:</strong>
+            <span><%= rssPost.creator || 'N/A' %></span>
+          </li>
+          
+          <li class="list-group-item">
+            <strong>Source URL:</strong>
+            <div class="mt-1">
+              <a href="<%= rssPost.sourceURL %>" target="_blank" rel="noopener noreferrer" class="text-break">
+                <%= rssPost.sourceURL %>
+              </a>
+            </div>
+          </li>
+          
+          <li class="list-group-item d-flex justify-content-between">
+            <strong>Publication Date:</strong>
+            <span><%= rssPost.pubDate ? new Date(rssPost.pubDate).toLocaleString() : 'N/A' %></span>
+          </li>
+          
+          <li class="list-group-item">
+            <strong>Categories:</strong>
+            <div class="mt-1">
+              <% if (rssPost.categories && rssPost.categories.length > 0) { %>
+                <% rssPost.categories.forEach(category => { %>
+                  <span class="badge bg-info me-1 mb-1"><%= category %></span>
+                <% }) %>
+              <% } else { %>
+                <span class="text-muted">No categories</span>
+              <% } %>
+            </div>
+          </li>
+          
+          <li class="list-group-item d-flex justify-content-between">
+            <strong>Created:</strong>
+            <span><%= new Date(rssPost.createdAt).toLocaleString() %></span>
+          </li>
+          
+          <li class="list-group-item d-flex justify-content-between">
+            <strong>Last Updated:</strong>
+            <span><%= new Date(rssPost.updatedAt).toLocaleString() %></span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        Are you sure you want to delete the RSS post "<%= rssPost.title %>"? This action cannot be undone.
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form action="/dashboard/rss-posts/<%= rssPost._id %>/delete" method="POST">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <button type="submit" class="btn btn-danger">Delete</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700&display=swap');
+  
+  .rtl {
+    direction: rtl;
+    text-align: right;
+  }
+  
+  .persian-content {
+    font-family: 'Vazirmatn', 'Tahoma', 'Arial', sans-serif;
+  }
+  
+  /* Additional styling for Persian content */
+  .persian-content h1, 
+  .persian-content h2, 
+  .persian-content h3, 
+  .persian-content h4, 
+  .persian-content h5, 
+  .persian-content h6 {
+    font-family: 'Vazirmatn', 'Tahoma', 'Arial', sans-serif;
+    text-align: right;
+    direction: rtl;
+  }
+  
+  .persian-content p {
+    font-family: 'Vazirmatn', 'Tahoma', 'Arial', sans-serif;
+    text-align: right;
+    direction: rtl;
+    line-height: 2.2;
+    margin-bottom: 1.5rem;
+  }
+  
+  blockquote {
+    border-right: 5px solid #eee;
+    padding-right: 15px;
+    margin-right: 0;
+    margin-left: 0;
+    font-style: italic;
+    color: #666;
+    background-color: rgba(0,0,0,0.03);
+    padding: 1.2rem 1.5rem;
+    border-radius: 4px;
+  }
+
+  /* Make the content snippet remain visible */
+  .alert.alert-light {
+    opacity: 1 !important;
+    display: block !important;
+  }
+</style> 

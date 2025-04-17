@@ -4,8 +4,10 @@ const {
   getRssPost,
   createRssPost,
   updateRssPost,
-  deleteRssPost
+  deleteRssPost,
+  checkRssPostExists
 } = require('../controllers/rssPostController');
+const { protect } = require('../middlewares/auth');
 
 const router = express.Router();
 
@@ -18,7 +20,10 @@ const router = express.Router();
 
 router.route('/')
   .get(getAllRssPosts)
-  .post(createRssPost);
+  .post(protect, createRssPost);
+
+router.route('/check-exists')
+  .post(checkRssPostExists);
 
 router.route('/:id')
   .get(getRssPost)

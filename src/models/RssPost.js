@@ -28,22 +28,23 @@ const mongoose = require('mongoose');
  *           type: string
  *           description: Creator of the RSS post
  *         content:
- *           type: array
+ *           type: string
  *           description: Content of the RSS post
  *         contentSnippet:
  *           type: string
  *           description: Content snippet of the RSS post
+ *         thumbnailImage:
+ *           type: string
+ *           description: URL of the thumbnail image
  *         categories:
  *           type: array
- *           description: Categories of the RSS post
- *         enclosureURL:
- *           type: array
  *           items:
- *             type: object
- *           description: Enclosure URLs of the RSS post
- *         additionalURLs:
- *           type: array
- *           description: Additional URLs of the RSS post
+ *             type: string
+ *           description: Categories of the RSS post
+ *         status:
+ *           type: string
+ *           enum: [draft, published, archived]
+ *           description: Status of the RSS post
  *         createdAt:
  *           type: string
  *           format: date-time
@@ -69,26 +70,34 @@ const rssPostSchema = new mongoose.Schema(
       type: String,
       required: [true, 'RSS post must have a publication date']
     },
-    /* creator: {
+    creator: {
       type: String,
       trim: true
     },
     content: {
-      type: Array
+      type: String,
+      trim: true
     },
     contentSnippet: {
       type: String,
       trim: true
     },
+    thumbnailImage: {
+      type: String,
+      trim: true
+    },
     categories: {
-      type: Array
+      type: [String],
+      default: []
     },
-    enclosureURL: {
-      type: Array
-    },
-    additionalURLs: {
-      type: Array
-    } */
+    status: {
+      type: String,
+      enum: {
+        values: ['draft', 'published', 'archived'],
+        message: 'Status must be either: draft, published, or archived'
+      },
+      default: 'draft'
+    }
   },
   {
     timestamps: true,
@@ -97,9 +106,12 @@ const rssPostSchema = new mongoose.Schema(
   }
 );
 
-// Create index for faster queries
+// Create indexes for faster queries
 rssPostSchema.index({ pubDate: -1 });
 rssPostSchema.index({ sourceURL: 1 });
+rssPostSchema.index({ title: 1 });
+rssPostSchema.index({ categories: 1 });
+rssPostSchema.index({ status: 1 });
 
 const RssPost = mongoose.model('RssPost', rssPostSchema);
 

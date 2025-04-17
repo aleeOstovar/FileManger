@@ -15,6 +15,28 @@ exports.createRssPost = async (postData) => {
 };
 
 /**
+ * Check if RSS post exists
+ * @param {Object} postData - Post data to check (sourceURL)
+ * @returns {Promise<Boolean>} - Whether post exists or not
+ */
+exports.checkRssPostExists = async (postData) => {
+  try {
+    const { link } = postData;
+    
+    if (!link) {
+      return false;
+    }
+    
+    // Count matching documents based only on sourceURL
+    const count = await RssPost.countDocuments({ sourceURL: link });
+    
+    return count > 0;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
  * Get all RSS posts with pagination
  * @param {Object} options - Query options (page, limit, sort, etc.)
  * @returns {Promise<Object>} - RSS posts and pagination info

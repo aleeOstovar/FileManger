@@ -124,6 +124,24 @@ router.post('/news-posts/:id/edit', csrfProtection, dashboardController.updateNe
 router.post('/news-posts/:id/delete', csrfProtection, dashboardController.deleteNewsPost);
 
 /**
+ * RSS Post Management Routes
+ */
+router.get('/rss-posts', csrfProtection, dashboardController.getRssPostsPage);
+
+// Restricted to admin and manager roles for creation and editing
+router.get('/rss-posts/create', csrfProtection, dashboardController.getCreateRssPostPage);
+
+router.post('/rss-posts/create', csrfProtection, dashboardController.createRssPost);
+
+router.get('/rss-posts/:id/preview', csrfProtection, dashboardController.previewRssPost);
+
+router.get('/rss-posts/:id/edit', csrfProtection, dashboardController.getEditRssPostPage);
+
+router.post('/rss-posts/:id/edit', csrfProtection, dashboardController.updateRssPost);
+
+router.post('/rss-posts/:id/delete', csrfProtection, dashboardController.deleteRssPost);
+
+/**
  * User Management Routes - Admin only
  */
 if (dashboardController.getUsers) {
