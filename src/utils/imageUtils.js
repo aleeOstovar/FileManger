@@ -35,11 +35,20 @@ async function downloadAndSaveImage(imageUrl) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
     
+    // Define browser-like headers to prevent bot detection
+    const headers = {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+      "Accept-Language": "en-US,en;q=0.9",
+      "Connection": "keep-alive"
+    };
+    
     // Download the image
     const response = await axios({
       method: 'GET',
       url: imageUrl,
-      responseType: 'stream'
+      responseType: 'stream',
+      headers: headers
     });
     
     // Get content type and file size
