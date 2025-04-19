@@ -228,8 +228,12 @@ const createDashboardUser = async () => {
     console.error('Error creating dashboard user:', error);
   } finally {
     rl.close();
-    if (!dbConfig.memory) {
+    // Safely disconnect from MongoDB
+    try {
       await mongoose.disconnect();
+      console.log('Disconnected from MongoDB');
+    } catch (err) {
+      console.error('Error disconnecting from MongoDB:', err);
     }
   }
 };

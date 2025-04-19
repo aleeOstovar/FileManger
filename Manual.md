@@ -392,6 +392,124 @@ The system can integrate with external RSS feeds:
    
 3. **Delete User** (admin only)
 
+### Creating Dashboard Users
+
+The system supports different types of dashboard users with varying permission levels. Here's how to create users for each role:
+
+#### Creating Regular Dashboard Users
+
+To create a basic user with dashboard access but limited permissions:
+
+```bash
+node scripts/createDashboardUser.js --name "Regular User" --email "user@example.com" --password "userpassword" --role "user"
+```
+
+Regular users can:
+- View content
+- Access their profile
+- View files and news posts
+- Cannot create or edit content
+
+#### Creating Editor Users
+
+To create an editor who can manage content:
+
+```bash
+node scripts/createDashboardUser.js --name "Content Editor" --email "editor@example.com" --password "editorpassword" --role "editor"
+```
+
+Editors can:
+- Create and edit news posts
+- Upload and manage files
+- View all content
+- Cannot manage users or API keys
+
+#### Creating Admin Users
+
+To create an admin user with full system access:
+
+```bash
+node scripts/createDashboardUser.js --name "System Admin" --email "admin@example.com" --password "adminpassword" --role "admin"
+```
+
+Admins can:
+- Perform all editor functions
+- Manage users
+- Create and revoke API keys
+- Access system settings
+
+#### Quick Setup of All User Types
+
+For testing or initial setup, you can quickly create all user types at once:
+
+```bash
+# First create admin user
+npm run create-admin-user
+
+# Then create an editor
+node scripts/create-user.js --name "Editor" --email "editor@example.com" --password "editorpass123" --role "editor"
+
+# Then create a regular user
+node scripts/create-user.js --name "User" --email "user@example.com" --password "userpass123" --role "user"
+```
+
+### Creating and Managing Users via Terminal
+
+There are several ways to create and manage users directly from the terminal, which can be useful for automation and system administration.
+
+#### Creating Admin Users with the Default Script
+
+As mentioned in section 8, you can create a default admin user with:
+
+```bash
+npm run create-dashboard-user
+```
+
+#### Creating Custom Admin Users
+
+To create an admin user with custom credentials, you can use the provided script:
+
+```bash
+node scripts/createDashboardUser.js --name "Admin Name" --email "admin@example.com" --password "securepassword" --role "admin"
+```
+
+This script accepts the following parameters:
+- `--name`: User's full name (required)
+- `--email`: User's email address (required)
+- `--password`: User's password (required)
+- `--role`: User's role (default: "user", options: "user", "editor", "admin")
+
+
+#### Using MongoDB Shell for Advanced Management
+
+For more advanced user management, you can directly use the MongoDB shell:
+
+1. Connect to your MongoDB database:
+```bash
+mongo mongodb://localhost:27017/filemanager
+```
+
+2. Query users:
+```javascript
+db.users.find({})  // List all users
+db.users.find({role: "admin"})  // List all admin users
+```
+
+3. Update a user (example: promote to admin):
+```javascript
+db.users.updateOne(
+  { email: "user@example.com" },
+  { $set: { role: "admin" } }
+)
+```
+
+4. Delete a user:
+```javascript
+db.users.deleteOne({ email: "user@example.com" })
+```
+
+**Note**: When working directly with MongoDB, remember that passwords are stored hashed, so you cannot simply update a password field. Always use the provided scripts or API for password changes.
+
 ## 13. API Key Management
 
 ### API Key Structure
